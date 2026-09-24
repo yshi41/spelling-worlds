@@ -741,7 +741,7 @@ function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 
 /* players: Charlie and Riley each keep a separate save in this browser */
-var PLAYERS=[{id:'charlie',name:'Charlie'},{id:'riley',name:'Riley'}];
+var PLAYERS=[{id:'charlie',name:'Charlie',grade:'4'},{id:'riley',name:'Riley',grade:'3'}];
 var PKEY='spelling-worlds-current', P={current:null};
 function pkey(id){ return 'spelling-worlds-'+id; }
 function defaults(){return {kid:'',charLagoon:'axolotl',charCandy:'bear',grade:'3',sound:true,roundLen:'10',worlds:{lagoon:{pearls:0,wearLevel:null},candy:{pearls:0,wearLevel:null}},words:{},bestStreak:0,totalCorrect:0};}
@@ -750,7 +750,8 @@ function profileById(id){ for(var i=0;i<PLAYERS.length;i++){ if(PLAYERS[i].id===
 function loadProfiles(){ try{ P.current=localStorage.getItem(PKEY)||null; }catch(e){} }
 function saveProfiles(){ try{ if(P.current) localStorage.setItem(PKEY,P.current); }catch(e){} }
 function readState(id){ try{ var raw=localStorage.getItem(pkey(id)); if(raw) return Object.assign(defaults(),JSON.parse(raw)); }catch(e){} return null; }
-function loadState(id){ S=readState(id)||defaults(); }
+function stateFor(id){ var st=readState(id)||defaults(); if(!st.gradePicked){ var p=profileById(id); if(p) st.grade=p.grade; } return st; }
+function loadState(id){ S=stateFor(id); }
 function save(){ if(!P.current) return; try{ localStorage.setItem(pkey(P.current),JSON.stringify(S)); }catch(e){} }
 function wstat(w){if(!S.words[w])S.words[w]={streak:0,right:0,wrong:0,seen:0};return S.words[w];}
 
@@ -1269,11 +1270,17 @@ function renderHome(){
   renderChars(); renderLevels();
 }
 function renderProfiles(){ var keepS=S, keepK=K_INK, html='';
-  PLAYERS.forEach(function(p){ S=readState(p.id)||defaults(); K_INK=WORLDS[world()].ink; var lv=levelFor(SW().pearls);
+  PLAYERS.forEach(function(p){ S=stateFor(p.id); K_INK=WORLDS[world()].ink; var lv=levelFor(SW().pearls);
     html+='<button type="button" class="profile-card'+(p.id===P.current?' on':'')+'" data-id="'+p.id+'">'+axoSVG({plain:true,mood:'happy'})+'<span class="pc-name">'+esc(p.name)+'</span><span class="pc-sub">'+gradeName()+', level '+lv+'</span></button>'; });
   S=keepS; K_INK=keepK; $('profileGrid').innerHTML=html; }
 function showProfiles(){ clearTimeout(G.timer); Voice.stop(); G.cur=null; renderProfiles(); show('scr-profiles'); }
 function selectProfile(id){ var p=profileById(id); if(!p) return; P.current=id; saveProfiles(); loadState(id); S.kid=p.name; save(); applyWorld(); renderSound(); renderHome(); show('scr-home'); }
+/* hover previews: show a world's whole look without changing anything */
+function previewWorld(w,st){ var keepS=S; if(st) S=st; var keepG=S.grade; S.grade=(w==='candy')?'4':'3';
+  var D=W(); document.documentElement.setAttribute('data-world',w); K_INK=D.ink; $('brand').textContent=D.brand;
+  $('scene').innerHTML=buildScene(); refreshMascots(); renderScene(); renderLevelBar(false); $('pearlCount').textContent=SW().pearls;
+  S.grade=keepG; S=keepS; }
+function endPreview(){ applyWorld(); }
 function renderLevels(){
   var L0=levels(), un=levelFor(SW().pearls), wear=wearLevel(), html='';
   for(var l=0;l<=L0.length;l++){ var L=l?L0[l-1]:null, ok=l<=un, sub;
@@ -1313,7 +1320,7 @@ function showWordDetail(w){
   $('wdHear').onclick=function(){ Voice.full(w); }; $('wdSpell').onclick=function(){ Voice.spell(w); };
   renderWords(); Voice.word(w);
 }
-function setGrade(g){ if(g===S.grade) return; S.grade=g; save(); wordSel=null; $('wordDetail').innerHTML='<p class="hint-text">Tap a word to hear it and see what it means.</p>';
+function setGrade(g){ if(g===S.grade) return; S.grade=g; S.gradePicked=true; save(); wordSel=null; $('wordDetail').innerHTML='<p class="hint-text">Tap a word to hear it and see what it means.</p>';
   applyWorld(); renderHome(); if(G.screen==='scr-words') renderWords(); SFX.warm(); SFX.pop(); jump('axoHome'); toast(W().brand+': '+gradeName()+' words'); }
 function renderSound(){ $('soundBtn').classList.toggle('off',!S.sound); $('soundBtn').setAttribute('aria-label','Sound effects '+(S.sound?'on':'off'));
   var w=document.querySelectorAll('#soundBtn .wave'); for(var i=0;i<w.length;i++) w[i].style.display=S.sound?'':'none'; }
@@ -1349,11 +1356,20 @@ $('wordList').addEventListener('click',function(e){ var b=e.target.closest('.wor
 $('playAgain').addEventListener('click',function(){ startRound(G.mode); });
 $('practiceMissed').addEventListener('click',function(){ startRound(G.mode,G.stats.missed.slice()); });
 $('sumHome').addEventListener('click',goHome);
+var HOVER=false; try{ HOVER=matchMedia('(hover: hover)').matches; }catch(e){}
+if(HOVER){
+  $('profileGrid').addEventListener('mouseover',function(e){ var b=e.target.closest('.profile-card'); if(!b||b.contains(e.relatedTarget)) return; var st=stateFor(b.getAttribute('data-id')); previewWorld(st.grade==='4'?'candy':'lagoon',st); });
+  $('profileGrid').addEventListener('mouseout',function(e){ var b=e.target.closest('.profile-card'); if(!b||b.contains(e.relatedTarget)) return; endPreview(); });
+  document.addEventListener('mouseover',function(e){ var b=e.target.closest('.seg-btn'); if(!b||b.contains(e.relatedTarget)) return; previewWorld(b.getAttribute('data-g')==='4'?'candy':'lagoon'); });
+  document.addEventListener('mouseout',function(e){ var b=e.target.closest('.seg-btn'); if(!b||b.contains(e.relatedTarget)) return; endPreview(); });
+}
 
 /* ambient drifters: bubbles in the lagoon, sugar puffs in the sweetshop */
 (function(){ var b=$('bubbles'), cols=['#FFC2DC','#BFE5FF','#FFE9A8','#C9F2DC','#E4D4FF']; for(var i=0;i<16;i++){ var s=document.createElement('span'); var size=10+Math.random()*30;
   s.style.cssText='left:'+(Math.random()*100)+'%;width:'+size+'px;height:'+size+'px;--c:'+cols[i%5]+';animation-duration:'+(10+Math.random()*13)+'s;animation-delay:'+(-Math.random()*22)+'s;'; b.appendChild(s); } })();
 
+/* small handle for automated tests */
+window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},world:world,save:save,startRound:startRound,levelFor:levelFor,WORDS3:WORDS3,WORDS4:WORDS4};
 function boot(){ loadProfiles(); applyWorld(); renderSound(); showProfiles(); }
 var hot=window.claude&&window.claude.hot;
 if(hot&&typeof hot.ready==='function'){ hot.ready(boot); } else { boot(); }

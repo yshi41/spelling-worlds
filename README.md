@@ -17,3 +17,15 @@ Each player's progress is saved in the browser on the device where they play. It
 ## Word lists
 
 The 3rd and 4th grade lists are the Scripps School Spelling Bee study words for those grades, with kid-friendly meanings and example sentences added.
+
+## Testing
+
+`test/test.js` drives the game in headless Chrome and checks the player screen, hover previews, both worlds, spelling and tile rounds, misses and lock-in, hints, level-ups, the word list, persistence across player switches and reloads, reset, and phone-width layout.
+
+```
+cd test
+npm install
+npm test
+```
+
+It expects Chrome at `C:/Program Files/Google/Chrome/Application/chrome.exe`; edit the path at the top of the script if yours differs.

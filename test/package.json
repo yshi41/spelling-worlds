@@ -1,0 +1,6 @@
+{
+  "name": "spelling-worlds-tests",
+  "private": true,
+  "scripts": { "test": "node test.js ../index.html" },
+  "devDependencies": { "puppeteer-core": "^24.0.0" }
+}
