@@ -469,6 +469,8 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
   .info{font-size:.95rem;padding:8px 12px}
   .tiles{padding-top:8px}
 }
+.level-card .lc-q{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-family:var(--display),sans-serif;font-weight:700;font-size:2.1rem;background:var(--gold);color:var(--gold-ink);margin:6px 0}
+.level-card.mystery{opacity:.85}
 [data-world="candy"] .pearl-fly{width:9px;height:22px;border-radius:5px;background:var(--accent);box-shadow:0 0 8px rgba(240,70,140,.6)}
 </style>
 <div class="scene" id="scene" aria-hidden="true"></div>
@@ -743,7 +745,7 @@ var SLOTS={hat:[1,4,6,7,10],neck:[2,7],eyes:[3],cape:[5,8,10],wand:[6],shoulders
 var WORLDS={
  lagoon:{brand:'Spelling Lagoon',cur:'pearls',where:'in the lagoon',ink:'#22333B',defName:'Axie',nameLabel:"Your axolotl's name",setupBtn:"Let's swim!",
   sub:'The 50 third-grade bee words. Hear it, spell it, earn pearls, level up your axolotl and the lagoon.',
-  levelsTitle:'Outfits and lagoon',levelsHint:'Every level adds a new outfit piece and something new in the lagoon. Tap a level you have earned to wear that look.',
+  levelsTitle:'Outfits and lagoon',levelsHint:'Every level unlocks a surprise for your character and the lagoon. Tap a level you have earned to wear that look.',
   lines:['Every pearl helps me dress up!','Time to learn some words!'],
   confetti:['#F9B4C3','#FF7A98','#EFBF3A','#22A377','#3DB7CB','#FFFFFF','#FFEDB3'],
   levels:[{p:30,o:'Bubble Crown',l:'shells and a starfish'},{p:80,o:'Pearl Necklace',l:'a coral garden'},{p:150,o:'Star Shades',l:'a school of fish'},{p:240,o:'Party Hat',l:'sunbeams'},{p:350,o:'Starry Cape',l:'jellyfish'},{p:480,o:'Wizard Hat and Wand',l:'a treasure chest'},{p:640,o:'Golden Crown and Gems',l:'a sea turtle'},{p:830,o:'Royal Robe',l:'a sunken ship'},{p:1050,o:'Sparkle Aura',l:'glowing lagoon lights'},{p:1300,o:'Legendary Crown and Rainbow Cape',l:'a rainbow and a castle'}],
@@ -753,7 +755,7 @@ var WORLDS={
   milestones:{3:{t:'Bubble Bonus!',b:5},5:{t:'Gill Glow!',b:10},10:{t:'Super Swimmer!',b:20},15:{t:'Lagoon Legend!',b:30},20:{t:'Unstoppable!',b:50},30:{t:'Spelling Champion!',b:100}}},
  candy:{brand:'Spelling Sweetshop',cur:'sprinkles',where:'in the candy land',ink:'#4A2C3A',defName:'Gummy',nameLabel:"Your gummy bear's name",setupBtn:"Let's get sweet!",
   sub:'The 50 fourth-grade bee words. Hear it, spell it, earn sprinkles, level up your gummy bear and the candy land.',
-  levelsTitle:'Outfits and candy land',levelsHint:'Every level adds a new outfit piece and something new outside. Tap a level you have earned to wear that look.',
+  levelsTitle:'Outfits and candy land',levelsHint:'Every level unlocks a surprise for your character and the candy land. Tap a level you have earned to wear that look.',
   lines:['Every sprinkle makes the candy land grow!','Time to learn some words!'],
   confetti:['#FF8FC8','#FF5C8A','#FFD23F','#7ED957','#8ED6FF','#C9A7FF','#FFFFFF'],
   levels:[{p:30,o:'Sprinkle Dusting',l:'gumdrop bushes'},{p:80,o:'Licorice Bow Tie',l:'lollipop trees'},{p:150,o:'Gummy Ring Glasses',l:'candy cane poles'},{p:240,o:'Cupcake Hat',l:'cotton candy clouds'},{p:350,o:'Candy Wrapper Cape',l:'a chocolate river'},{p:480,o:'Cone Hat and Lollipop Wand',l:'a gingerbread house'},{p:640,o:'Gumdrop Crown and Candy Necklace',l:'jellybean butterflies'},{p:830,o:'Chocolate Robe',l:'a candy train'},{p:1050,o:'Sugar Sparkle Aura',l:'sprinkle rain'},{p:1300,o:'Rock Candy Crown and Rainbow Taffy Cape',l:'a rainbow and a candy castle'}],
@@ -1323,17 +1325,16 @@ function previewWorld(w,st){ var keepS=S; if(st) S=st; var keepG=S.grade; S.grad
 function endPreview(){ applyWorld(); }
 function renderLevels(){
   var L0=levels(), un=levelFor(SW().pearls), wear=wearLevel(), html='';
-  for(var l=0;l<=L0.length;l++){ var L=l?L0[l-1]:null, ok=l<=un, sub;
-    if(!ok) sub=L.p+' '+W().cur; else if(l===wear) sub='Wearing it'; else sub=L?('+ '+esc(L.l)):'Tap to wear';
-    html+='<button type="button" class="level-card'+(ok?'':' locked')+(l===wear?' wear':'')+'" data-lv="'+l+'"'+(ok?'':' disabled')+'>'+axoSVG()
-      +'<span class="lc-lv">'+(l?'Level '+l:'Start')+'</span><span class="lc-name">'+(L?esc(L.o):'Just me')+'</span><span class="lc-sub">'+sub+'</span></button>'; }
+  for(var l=0;l<=un;l++){ var L=l?L0[l-1]:null, sub=(l===wear)?'Wearing it':(L?('+ '+esc(L.l)):'Tap to wear');
+    html+='<button type="button" class="level-card'+(l===wear?' wear':'')+'" data-lv="'+l+'">'+axoSVG()+'<span class="lc-lv">'+(l?'Level '+l:'Start')+'</span><span class="lc-name">'+(L?esc(L.o):'Just me')+'</span><span class="lc-sub">'+sub+'</span></button>'; }
+  if(un<L0.length){ html+='<button type="button" class="level-card locked mystery" disabled><span class="lc-q" aria-hidden="true">?</span><span class="lc-lv">Level '+(un+1)+'</span><span class="lc-name">Surprise!</span><span class="lc-sub">'+L0[un].p+' '+W().cur+'</span></button>'; }
   var g=$('levelGrid'); g.innerHTML=html;
-  var cards=g.querySelectorAll('.level-card'); for(var i=0;i<cards.length;i++){ var sv=cards[i].querySelector('.axo'); if(sv) applyOutfit(sv,parseInt(cards[i].getAttribute('data-lv'),10)); }
+  var cards=g.querySelectorAll('.level-card[data-lv]'); for(var i=0;i<cards.length;i++){ var sv=cards[i].querySelector('.axo'); if(sv) applyOutfit(sv,parseInt(cards[i].getAttribute('data-lv'),10)); }
 }
 function renderLevelBar(pulse){
   var L0=levels(), p=SW().pearls, lv=levelFor(p), next=L0[lv], prev=lv?L0[lv-1].p:0;
   $('lbLevel').textContent='Level '+lv;
-  if(next){ var k=(p-prev)/(next.p-prev); $('lbFill').style.width=Math.max(0,Math.min(100,k*100))+'%'; $('lbNext').textContent=next.o+' at '+next.p+' '+W().cur; }
+  if(next){ var k=(p-prev)/(next.p-prev); $('lbFill').style.width=Math.max(0,Math.min(100,k*100))+'%'; $('lbNext').textContent='Level '+(lv+1)+' at '+next.p+' '+W().cur; }
   else { $('lbFill').style.width='100%'; $('lbNext').textContent='Top level reached!'; }
   if(pulse){ var b=$('levelbar'); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); }
 }
