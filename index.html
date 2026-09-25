@@ -381,10 +381,10 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 }
 
 /* character picker */
-.char-row{display:flex;gap:10px;overflow-x:auto;padding:4px 2px 8px;-webkit-overflow-scrolling:touch;scroll-snap-type:x proximity}
-.char-chip{flex:0 0 auto;width:98px;border:2px solid var(--line);background:var(--surface-2);border-radius:16px;padding:8px 6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;scroll-snap-align:start}
-.char-chip svg{width:64px;height:60px;overflow:visible}
-.char-chip .cc-name{font-family:var(--display),sans-serif;font-weight:600;font-size:.85rem;text-align:center;line-height:1.1}
+.char-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px;padding:2px 0 4px}
+.char-chip{min-width:0;border:2px solid var(--line);background:var(--surface-2);border-radius:14px;padding:6px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
+.char-chip svg{width:56px;height:52px;overflow:visible}
+.char-chip .cc-name{font-family:var(--display),sans-serif;font-weight:600;font-size:.78rem;text-align:center;line-height:1.1}
 .char-chip.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface))}
 .char-chip .axo,.char-chip .gill,.char-chip .ear,.char-chip .eye-open{animation:none}
 
