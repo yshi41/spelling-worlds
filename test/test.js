@@ -87,18 +87,20 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   ok(await count('#resultBox .tile.miss') > 0, 'missing letters marked');
   ok(t.streak === 0 && await count('#dots .dot.miss') === 1, 'streak reset and dot marked red');
   await typeAnswer(w2);
-  t = await T(); ok(t.phase === 'done' && t.pearls === before + 14, 'lock-in retype accepted for +4 (' + t.pearls + ')');
+  t = await T(); ok(t.phase === 'done' && t.pearls === before + 12, 'lock-in retype accepted for +2 (' + t.pearls + ')');
   await sleep(2200);
   t = await T(); const w3 = t.word;
   await page.click('#hintBtn'); await sleep(250);
   ok(await visible('#hintStrip') && (await text('#hintStrip .h.show')) === w3[0], 'hint reveals the first letter');
   await typeAnswer(w3);
-  t = await T(); ok(t.pearls === before + 19, 'hinted answer worth 5 (' + t.pearls + ')');
+  t = await T(); ok(t.pearls === before + 17, 'hinted answer worth 5 (' + t.pearls + ')');
+  const beforeRetry = t.pearls;
   for (let i = 0; i < 14; i++) { await sleep(1500); t = await T(); if (t.screen !== 'scr-play') break; if (t.phase !== 'answer') continue; await typeAnswer(t.word); }
   await sleep(2800);
   t = await T();
   ok(t.screen === 'scr-summary', 'round ends on the summary screen');
   ok(await count('#dots .dot') === 6, 'missed word was retried at the end');
+  ok(await page.evaluate(() => __spelling.G.queue[5].status === 'retry'), 'retry dot marked as a fix');
   ok((await text('#sumStats')).indexOf('of 5') >= 0, 'summary counts the 5 words');
   ok(await visible('#missedWrap') && (await text('#missedList')).indexOf(w2) >= 0, 'missed word listed');
   ok(t.level >= 1, 'reached level 1 (' + t.pearls + ' sprinkles)');
@@ -147,7 +149,16 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.evaluate(() => { const w = __spelling.WORDS4.find(x => x.w === 'December'); __spelling.startRound('spell', [w]); });
   await sleep(500); await typeAnswer('december');
   t = await T(); ok(t.phase === 'done', 'lowercase december accepted');
-  await page.click('#quitBtn'); await sleep(300);
+  await page.evaluate(() => document.getElementById('quitBtn').click()); await sleep(300);
+  await page.evaluate(() => { const w = __spelling.WORDS4.find(x => x.w === 'kelp'); __spelling.startRound('spell', [w]); });
+  await sleep(500); await typeAnswer('KeLP');
+  t = await T(); ok(t.phase === 'done', 'mixed-case KeLP accepted');
+  ok(await page.$eval('#spellInput', el => getComputedStyle(el).textTransform === 'none'), 'spelling box keeps what she types');
+  await page.evaluate(() => document.getElementById('quitBtn').click()); await sleep(300);
+  await page.evaluate(() => { const w = __spelling.WORDS4.find(x => x.w === 'December'); __spelling.startRound('spell', [w]); });
+  await sleep(500); await typeAnswer('DECEMBAR');
+  ok((await T()).phase === 'lockin' && await count('#resultBox .tile.ok') === 7, 'diff ignores case: 7 letters match in DECEMBAR');
+  await page.evaluate(() => document.getElementById('quitBtn').click()); await sleep(300);
 
   console.log('10. Switching players and persistence');
   const charliePearls = (await T()).pearls;
@@ -174,6 +185,23 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.click('.profile-card[data-id="charlie"]'); await sleep(500);
   ok((await T()).pearls === charliePearls, 'Charlie progress survives a reload');
   ok(await text('#axoNameHome') === 'Cupcake', 'character choice survives a reload');
+
+  console.log('10b. Saves are safe before a player is picked');
+  const keepPearls = (await T()).pearls;
+  await page.evaluate(() => { __spelling.G.cur = null; }); await page.reload({ waitUntil: 'load' }); await sleep(600);
+  await page.click('#soundBtn'); await sleep(150); await page.click('#soundBtn'); await sleep(150);
+  await page.click('.profile-card[data-id="charlie"]'); await sleep(500);
+  ok((await T()).pearls === keepPearls, 'sound button on the player screen does not wipe the last save');
+  await page.click('.mode-btn[data-mode="list"]'); await sleep(300); await page.click('#wordList .word-row'); await sleep(200);
+  await page.click('#wordsHome'); await sleep(200); await page.click('#switchBtn'); await sleep(300);
+  await page.click('.profile-card[data-id="riley"]'); await sleep(400); await page.click('.mode-btn[data-mode="list"]'); await sleep(300);
+  ok((await text('#wordDetail')).indexOf('Tap a word') >= 0 && await count('#wordList .word-row.on') === 0, 'word detail does not carry over to the other player');
+  await page.click('#wordsHome'); await sleep(200); await page.click('#switchBtn'); await sleep(300); await page.click('.profile-card[data-id="charlie"]'); await sleep(400);
+  await page.evaluate(() => { const w = __spelling.WORDS4.find(x => x.w === 'kelp'); __spelling.startRound('tiles', [w]); }); await sleep(400);
+  await page.evaluate(() => { const L = __spelling.G.tileLetters, want = 'kelp'.split(''), used = []; want.forEach(ch => { const i = L.findIndex((c, j) => c === ch && used.indexOf(j) < 0); used.push(i); document.querySelector('#tiles .tile.pick[data-i="' + i + '"]').click(); }); document.querySelector('#slots .tile.slot[data-i="3"]').click(); });
+  await sleep(600);
+  ok((await T()).phase === 'answer', 'removing a tile right after filling the row cancels the auto-check');
+  await page.evaluate(() => document.getElementById('quitBtn').click()); await sleep(300);
 
   console.log('11. Sound toggle and reset');
   await page.click('#soundBtn'); await sleep(100);
@@ -215,6 +243,36 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   ok((await T()).phase === 'done' && await page.$eval('#spellInput', el => el.readOnly && document.activeElement === el), 'input stays focused (keyboard stays open) after an answer');
   await tap('#quitBtn'); await sleep(300);
 
+  console.log('12c. Every word in both lists, both modes');
+  await page.setViewport({ width: 1200, height: 900 }); await sleep(300);
+  const sweep = await page.evaluate(() => {
+    const H = __spelling, bad = [], G = () => H.G, click = () => document.getElementById('checkBtn').click();
+    const order = (word) => { const used = [], L = G().tileLetters; return word.toLowerCase().split('').map(ch => { for (let i = 0; i < L.length; i++) { if (L[i] === ch && used.indexOf(i) < 0) { used.push(i); return i; } } return -1; }); };
+    for (const w of H.WORDS3.concat(H.WORDS4)) {
+      H.startRound('spell', [w]); document.getElementById('spellInput').value = w.w.toUpperCase(); click();
+      if (G().phase !== 'done') bad.push('spell upper: ' + w.w);
+      H.startRound('spell', [w]); document.getElementById('spellInput').value = ' ' + w.w.toLowerCase() + ' '; click();
+      if (G().phase !== 'done') bad.push('spell lower: ' + w.w);
+      H.startRound('tiles', [w]);
+      if (G().tileLetters.join('') === w.w.toLowerCase() && w.w.length > 2) bad.push('tiles not scrambled: ' + w.w);
+      if (G().tileLetters.some(c => c !== c.toLowerCase())) bad.push('tile has a capital: ' + w.w);
+      let o = order(w.w); if (o.indexOf(-1) >= 0) { bad.push('tiles missing letters: ' + w.w); continue; }
+      G().tileSel = o; click(); if (G().phase !== 'done') bad.push('tiles correct: ' + w.w);
+      H.startRound('tiles', [w]); o = order(w.w); const rev = o.slice().reverse();
+      if (rev.map(i => G().tileLetters[i]).join('') !== w.w.toLowerCase()) { G().tileSel = rev; click(); if (G().phase !== 'lockin') bad.push('tiles wrong -> lockin: ' + w.w); o = order(w.w); G().tileSel = o; click(); if (G().phase !== 'done') bad.push('tiles lock-in retype: ' + w.w); }
+      const re = new RegExp(w.w, 'ig'); if (!re.test(w.s)) bad.push('sentence lacks the word: ' + w.w);
+      const pre = w.w.toLowerCase().slice(0, Math.min(5, w.w.length));
+      if (w.d.toLowerCase().indexOf(pre) >= 0) bad.push('meaning gives it away: ' + w.w);
+      if (w.s.replace(new RegExp(w.w, 'ig'), '____').toLowerCase().indexOf(pre) >= 0) bad.push('blanked sentence gives it away: ' + w.w);
+    }
+    return bad;
+  });
+  ok(sweep.length === 0, 'all 100 words pass upper/lower typing, tiles, and tile lock-in' + (sweep.length ? ': ' + sweep.slice(0, 8).join(' | ') : ''));
+  await page.evaluate(() => { const b = document.getElementById('quitBtn'); b.click(); }); await sleep(400);
+  await page.evaluate(() => { const w = __spelling.WORDS4.find(x => x.w === 'December'); __spelling.startRound('tiles', [w]); }); await sleep(400);
+  await page.click('#hintBtn'); await sleep(200);
+  ok(await count('#tiles .tile.pick.glow') === 1 && (await text('#tiles .tile.pick.glow')) === 'd', 'December hint glows the lowercase d tile');
+  await page.evaluate(() => document.getElementById('quitBtn').click()); await sleep(300);
   console.log('13. Errors');
   ok(errors.length === 0, 'no page errors' + (errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''));
   await browser.close();

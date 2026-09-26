@@ -69,6 +69,7 @@
   --ground:#5A2B4E; --ground-2:#274A40; --choco:#3A2118;
 }
 *,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{height:100%}
 body{margin:0;font-family:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif;font-size:16px;color:var(--ink);
   background:linear-gradient(180deg,var(--bg) 0%,var(--bg-deep) 100%);overflow:hidden;-webkit-tap-highlight-color:transparent}
@@ -276,7 +277,7 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 .hint-strip .h{font-family:var(--display),sans-serif;font-size:1.5rem;font-weight:600;min-width:1.2em;text-align:center;color:var(--ink-soft);border-bottom:3px solid var(--line)}
 .hint-strip .h.show{color:var(--sky);border-color:var(--sky)}
 .spell-input{font-family:var(--display),sans-serif;font-weight:600;font-size:clamp(1.7rem,6vw,2.7rem);letter-spacing:.12em;text-align:center;width:100%;
-  border:4px solid var(--line);border-radius:20px;padding:12px 10px;background:var(--surface-2);color:var(--ink);text-transform:lowercase}
+  border:4px solid var(--line);border-radius:20px;padding:12px 10px;background:var(--surface-2);color:var(--ink)}
 .spell-input:focus{border-color:var(--sky);outline:none}
 .spell-input.ok{border-color:var(--good);background:var(--good-soft)}
 .spell-input.bad{border-color:var(--bad);background:var(--bad-soft)}
@@ -471,6 +472,9 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
 }
 .level-card .lc-q{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-family:var(--display),sans-serif;font-weight:700;font-size:2.1rem;background:var(--gold);color:var(--gold-ink);margin:6px 0}
 .level-card.mystery{opacity:.85}
+@media (max-width:720px){ .rl-grade{display:none} .play-top{flex-wrap:nowrap} .dots{flex:1;min-width:0;overflow:hidden;flex-wrap:nowrap;padding:5px} .notice{font-size:.85rem;padding:6px 10px} }
+
+#app[data-screen="scr-play"] #lbNext{visibility:hidden}
 [data-world="candy"] .pearl-fly{width:9px;height:22px;border-radius:5px;background:var(--accent);box-shadow:0 0 8px rgba(240,70,140,.6)}
 </style>
 <div class="scene" id="scene" aria-hidden="true"></div>
@@ -663,7 +667,7 @@ var WORDS3=[
 {w:'result',d:'what happens because of something',s:'The result of the game was a tie.'},
 {w:'pearls',d:'smooth, shiny gems that grow inside oysters',s:'The necklace was made of white pearls.'},
 {w:'shivering',d:'shaking from cold or fear',s:'We were shivering after the snowball fight.'},
-{w:'smoothly',d:'in a smooth, easy way',s:'The boat glided smoothly across the lake.'},
+{w:'smoothly',d:'in an even, easy way with no bumps',s:'The boat glided smoothly across the lake.'},
 {w:'seventy',d:'the number 70',s:'My grandpa is seventy years old.'},
 {w:'breeze',d:'a gentle wind',s:'A cool breeze blew through the open window.'},
 {w:'bamboo',d:'a tall plant with hollow, woody stems',s:'Pandas love to eat bamboo.'},
@@ -671,10 +675,10 @@ var WORDS3=[
 {w:'cloak',d:'a long, loose coat with no sleeves',s:'The wizard wore a purple cloak.'},
 {w:'total',d:'the whole amount; everything added together',s:'The total cost of the toys was ten dollars.'},
 {w:'relax',d:'to rest and feel calm',s:'After school, I like to relax with a book.'},
-{w:'safety',d:'being safe from harm',s:'Wear a helmet for safety when you ride your bike.'},
+{w:'safety',d:'being protected from getting hurt',s:'Wear a helmet for safety when you ride your bike.'},
 {w:'entire',d:'the whole thing; all of it',s:'She ate the entire pizza by herself.'},
 {w:'hospital',d:'a place where doctors and nurses care for sick people',s:'The nurse works at the hospital.'},
-{w:'ginger',d:'a spicy root used in cooking',s:'Gingerbread cookies are made with ginger.'},
+{w:'ginger',d:'a spicy root used in cooking',s:'Grandpa added ginger to the soup to make it spicy.'},
 {w:'pennies',d:'coins worth one cent each',s:'I found three pennies under the couch.'},
 {w:'afraid',d:'scared; frightened',s:'My little brother is afraid of the dark.'},
 {w:'charming',d:'very pleasant and easy to like',s:'The charming puppy made everyone smile.'},
@@ -687,10 +691,10 @@ var WORDS3=[
 /* 4th grade list */
 var WORDS4=[
 {w:'buttons',d:'small round things that fasten clothes',s:'She sewed new buttons on her coat.'},
-{w:'tiptoed',d:'walked very quietly on the tips of your toes',s:'He tiptoed past the sleeping baby.'},
+{w:'tiptoed',d:'walked very quietly on the front of your feet',s:'He tiptoed past the sleeping baby.'},
 {w:'burlap',d:'a rough, scratchy cloth used for sacks',s:'The potatoes came in a burlap sack.'},
 {w:'butterflies',d:'insects with big, colorful wings',s:'Butterflies fluttered around the garden.'},
-{w:'carefully',d:'in a careful, gentle way',s:'She carefully carried the eggs to the table.'},
+{w:'carefully',d:'gently, while paying close attention',s:'She carefully carried the eggs to the table.'},
 {w:'tractor',d:'a strong farm vehicle that pulls heavy things',s:'The farmer drove the tractor across the field.'},
 {w:'fickle',d:'changing your mind often',s:'The fickle weather went from sunny to rainy in an hour.'},
 {w:'boycotting',d:'refusing to buy or use something as a protest',s:'They are boycotting the store until it treats workers fairly.'},
@@ -705,7 +709,7 @@ var WORDS4=[
 {w:'tissues',d:'soft, thin paper for wiping your nose',s:'Grab some tissues if you need to sneeze.'},
 {w:'cuddle',d:'to hold close and snuggle',s:'The kitten likes to cuddle in my lap.'},
 {w:'clever',d:'smart and quick to understand',s:'The clever fox found a way out of the trap.'},
-{w:'wetlands',d:'soft, wet land like a marsh or swamp',s:'Frogs and herons live in the wetlands.'},
+{w:'wetlands',d:'soggy ground like a marsh or swamp',s:'Frogs and herons live in the wetlands.'},
 {w:'kelp',d:'a large brown seaweed',s:'Sea otters float in beds of kelp.'},
 {w:'sniffling',d:'breathing in through a stuffy nose again and again',s:'He was sniffling all day because of his cold.'},
 {w:'permit',d:'to allow something',s:'The teacher will not permit gum in class.'},
@@ -730,8 +734,8 @@ var WORDS4=[
 {w:'elite',d:'the very best of a group',s:'Only elite runners qualify for the race.'},
 {w:'thimble',d:'a small cap worn on a finger when sewing',s:'Grandma wore a thimble so the needle would not poke her.'},
 {w:'warrior',d:'a brave fighter',s:'The warrior protected the village.'},
-{w:'laughter',d:'the sound of laughing',s:'Laughter filled the room during the funny movie.'},
-{w:'hurdler',d:'a runner who jumps over hurdles',s:'The hurdler leaped over every bar on the track.'},
+{w:'laughter',d:'the happy sound people make when something is funny',s:'Laughter filled the room during the funny movie.'},
+{w:'hurdler',d:'a runner who leaps over bars set up on a track',s:'The hurdler leaped over every bar on the track.'},
 {w:'inferior',d:'lower in quality; not as good',s:'The cheap crayons were inferior to the good ones.'},
 {w:'dictionary',d:'a book that lists words and their meanings',s:'Look up the word in the dictionary.'},
 {w:'examine',d:'to look at something closely',s:'The doctor will examine your sore throat.'},
@@ -743,7 +747,7 @@ function gradeName(){ return S.grade==='4'?'4th grade':'3rd grade'; }
 var RAINBOW=['#FF5C8A','#FF9A3C','#FFE24A','#3FCB98','#3DB7CB','#8A5CFF'];
 var SLOTS={hat:[1,4,6,7,10],neck:[2,7],eyes:[3],cape:[5,8,10],wand:[6],shoulders:[8],aura:[9],halo:[10]};
 var WORLDS={
- lagoon:{brand:'Spelling Lagoon',cur:'pearls',where:'in the lagoon',ink:'#22333B',defName:'Axie',nameLabel:"Your axolotl's name",setupBtn:"Let's swim!",
+ lagoon:{brand:'Spelling Lagoon',sumTitles:['Splash-tastic round!','Great swimming!','Good practice!'],sumVoice:['Amazing! You are a spelling star!','Great job! Keep swimming!','Good practice. Come back and try again soon!'],cur:'pearls',where:'in the lagoon',ink:'#22333B',defName:'Axie',nameLabel:"Your axolotl's name",setupBtn:"Let's swim!",
   sub:'The 50 third-grade bee words. Hear it, spell it, earn pearls, level up your axolotl and the lagoon.',
   levelsTitle:'Outfits and lagoon',levelsHint:'Every level unlocks a surprise for your character and the lagoon. Tap a level you have earned to wear that look.',
   lines:['Every pearl helps me dress up!','Time to learn some words!'],
@@ -753,7 +757,7 @@ var WORLDS={
   oops:['Almost! Look closely.','Oops, we can fix it together.','Not yet, but you can do it!','Close one! Watch the letters.'],
   listen:['Listen closely!','Here comes a word.','You can do this!','Ears open!','Here we go!'],
   milestones:{3:{t:'Bubble Bonus!',b:5},5:{t:'Gill Glow!',b:10},10:{t:'Super Swimmer!',b:20},15:{t:'Lagoon Legend!',b:30},20:{t:'Unstoppable!',b:50},30:{t:'Spelling Champion!',b:100}}},
- candy:{brand:'Spelling Sweetshop',cur:'sprinkles',where:'in the candy land',ink:'#4A2C3A',defName:'Gummy',nameLabel:"Your gummy bear's name",setupBtn:"Let's get sweet!",
+ candy:{brand:'Spelling Sweetshop',sumTitles:['Sweet success!','Sugar-tastic round!','Good practice!'],sumVoice:['Amazing! You are a spelling star!','Great job! That was sweet!','Good practice. Come back and try again soon!'],cur:'sprinkles',where:'in the candy land',ink:'#4A2C3A',defName:'Gummy',nameLabel:"Your gummy bear's name",setupBtn:"Let's get sweet!",
   sub:'The 50 fourth-grade bee words. Hear it, spell it, earn sprinkles, level up your gummy bear and the candy land.',
   levelsTitle:'Outfits and candy land',levelsHint:'Every level unlocks a surprise for your character and the candy land. Tap a level you have earned to wear that look.',
   lines:['Every sprinkle makes the candy land grow!','Time to learn some words!'],
@@ -821,8 +825,8 @@ var Voice=(function(){
     for(var i=0;i<pref.length&&!voice;i++){ for(var j=0;j<vs.length;j++){ if(vs[j].name.indexOf(pref[i])>=0&&/^en/i.test(vs[j].lang)){ voice=vs[j]; break; } } }
     if(!voice){ voice=vs.filter(function(v){return /^en[-_]US/i.test(v.lang);})[0]||vs.filter(function(v){return /^en/i.test(v.lang);})[0]||null; } }
   if(ok){ choose(); try{ speechSynthesis.onvoiceschanged=choose; }catch(e){} }
-  function say(text,rate){ if(!ok) return false; try{ if(speechSynthesis.speaking||speechSynthesis.pending) speechSynthesis.cancel();
-    var u=new SpeechSynthesisUtterance(text); u.rate=rate||0.85; u.pitch=1.05; u.lang='en-US'; if(voice) u.voice=voice; speechSynthesis.speak(u); }catch(e){ return false; } return true; }
+  function say(text,rate){ if(!ok) return false; try{ var busy=speechSynthesis.speaking||speechSynthesis.pending; if(busy) speechSynthesis.cancel();
+    var u=new SpeechSynthesisUtterance(text); u.rate=rate||0.85; u.pitch=1.05; u.lang='en-US'; if(voice) u.voice=voice; if(busy) setTimeout(function(){ try{ speechSynthesis.speak(u); }catch(e){} },80); else speechSynthesis.speak(u); }catch(e){ return false; } return true; }
   return { ok:ok, say:say,
     warm:function(){ if(!ok) return; try{ speechSynthesis.speak(new SpeechSynthesisUtterance('')); }catch(e){} },
     stop:function(){ if(!ok) return; try{ speechSynthesis.cancel(); }catch(e){} },
@@ -1014,7 +1018,7 @@ function setOutfit(){ var lv=wearLevel(), a=document.querySelectorAll('.axo-box 
 DRAW.axolotl=function(K){ function gill(cls,d,pts){ return '<g class="gill '+cls+'"><path d="'+d+'" stroke="var(--gill)" stroke-width="7" fill="none" stroke-linecap="round"/>'+pts.map(function(q){return svgDot(q[0],q[1],q[2],'#FFA6BA');}).join('')+'</g>'; }
   var gills=gill('g1','M88 92 C72 80 54 70 36 62',[[64,74,6],[50,67,6],[36,62,7.5]])+gill('g2','M80 114 C62 110 42 108 22 106',[[60,110,6],[41,108,6],[22,106,7.5]])+gill('g3','M84 136 C68 144 50 152 34 160',[[64,144,6],[48,153,6],[34,160,7.5]]);
   return {back:'<g class="gills-l">'+gills+'</g><g class="gills-r" transform="translate(260 0) scale(-1 1)">'+gills+'</g>',
-   main:'<ellipse cx="130" cy="200" rx="58" ry="40" fill="var(--mascot)"/><ellipse cx="82" cy="202" rx="15" ry="9" transform="rotate(-28 82 202)" fill="var(--mascot)"/><ellipse cx="178" cy="202" rx="15" ry="9" transform="rotate(28 178 202)" fill="var(--mascot)"/><ellipse cx="130" cy="213" rx="34" ry="22" fill="#FDD6DF"/><ellipse cx="130" cy="118" rx="78" ry="66" fill="var(--mascot)"/>'+blush(78,182,142)+faceSVG(K,27,112,146)}; };
+   main:'<ellipse cx="130" cy="200" rx="58" ry="40" fill="#F9B4C3"/><ellipse cx="82" cy="202" rx="15" ry="9" transform="rotate(-28 82 202)" fill="#F9B4C3"/><ellipse cx="178" cy="202" rx="15" ry="9" transform="rotate(28 178 202)" fill="#F9B4C3"/><ellipse cx="130" cy="213" rx="34" ry="22" fill="#FDD6DF"/><ellipse cx="130" cy="118" rx="78" ry="66" fill="#F9B4C3"/>'+blush(78,182,142)+faceSVG(K,27,112,146)}; };
 DRAW.turtle=function(K){ return {back:'',main:'<ellipse cx="60" cy="206" rx="22" ry="11" transform="rotate(-30 60 206)" fill="#5FC79A"/><ellipse cx="200" cy="206" rx="22" ry="11" transform="rotate(30 200 206)" fill="#5FC79A"/><ellipse cx="96" cy="246" rx="18" ry="9" fill="#5FC79A"/><ellipse cx="164" cy="246" rx="18" ry="9" fill="#5FC79A"/><ellipse cx="130" cy="205" rx="68" ry="46" fill="#2BB287"/><ellipse cx="130" cy="205" rx="54" ry="34" fill="none" stroke="#1F8A63" stroke-width="3"/><path d="M104 184 L130 172 L156 184 L156 210 L130 222 L104 210 Z" fill="none" stroke="#1F8A63" stroke-width="3"/><ellipse cx="130" cy="118" rx="62" ry="56" fill="#5FC79A"/>'+blush(84,176,140)+faceSVG(K,27,112,146)}; };
 DRAW.frog=function(K){ return {back:'',main:'<ellipse cx="78" cy="242" rx="28" ry="12" fill="#6CC84A"/><ellipse cx="182" cy="242" rx="28" ry="12" fill="#6CC84A"/><ellipse cx="130" cy="205" rx="60" ry="42" fill="#7ED957"/><ellipse cx="130" cy="212" rx="38" ry="28" fill="#D6F5B0"/><ellipse cx="76" cy="200" rx="10" ry="22" transform="rotate(20 76 200)" fill="#7ED957"/><ellipse cx="184" cy="200" rx="10" ry="22" transform="rotate(-20 184 200)" fill="#7ED957"/><ellipse cx="130" cy="122" rx="76" ry="58" fill="#7ED957"/>'+blush(82,178,140,'#FF9A3C')+faceSVG(K,27,112,146,{sclera:15})}; };
 DRAW.otter=function(K){ return {back:'',main:'<ellipse cx="192" cy="236" rx="30" ry="12" transform="rotate(-25 192 236)" fill="#8A5A36"/><ellipse cx="130" cy="205" rx="56" ry="46" fill="#9C6B43"/><ellipse cx="130" cy="212" rx="36" ry="30" fill="#E8CDA8"/><ellipse cx="80" cy="200" rx="13" ry="22" transform="rotate(25 80 200)" fill="#9C6B43"/><ellipse cx="180" cy="200" rx="13" ry="22" transform="rotate(-25 180 200)" fill="#9C6B43"/><circle cx="72" cy="70" r="13" fill="#9C6B43"/><circle cx="72" cy="72" r="6" fill="#E8CDA8"/><circle cx="188" cy="70" r="13" fill="#9C6B43"/><circle cx="188" cy="72" r="6" fill="#E8CDA8"/><ellipse cx="130" cy="118" rx="70" ry="62" fill="#9C6B43"/><ellipse cx="130" cy="142" rx="30" ry="20" fill="#E8CDA8"/><ellipse cx="130" cy="130" rx="8" ry="5.5" fill="'+K+'"/><path d="M100 140 L76 134 M100 146 L76 150 M160 140 L184 134 M160 146 L184 150" stroke="'+K+'" stroke-width="2" opacity=".55"/>'+blush(82,178,138)+faceSVG(K,27,112,148)}; };
@@ -1093,7 +1097,7 @@ function toast(msg){ var t=$('toast'); t.textContent=msg; t.hidden=false; clearT
 var Banners={q:[],busy:false,
   push:function(o){ this.q.push(o); this.run(); },
   run:function(){ if(this.busy||!this.q.length) return; var self=this; this.busy=true; var o=this.q.shift(); var el=$('banner');
-    el.innerHTML='<div class="banner-card '+(o.kind||'')+'">'+(o.svg||'')+'<div class="banner-title">'+esc(o.title)+'</div><div class="banner-sub">'+esc(o.sub||'')+'</div></div>';
+    el.innerHTML='<div class="banner-card '+(o.kind||'')+'" style="animation-delay:0s,'+(((o.ms||2400)-500)/1000)+'s">'+(o.svg||'')+'<div class="banner-title">'+esc(o.title)+'</div><div class="banner-sub">'+esc(o.sub||'')+'</div></div>';
     if(o.level!=null){ var sv=el.querySelector('.axo'); if(sv) applyOutfit(sv,o.level); }
     el.hidden=false; setTimeout(function(){ el.hidden=true; self.busy=false; self.run(); },o.ms||2400); }
 };
@@ -1114,11 +1118,12 @@ function countTo(el,from,to,dur){ var t0=performance.now(); function f(t){ var k
 function addPearls(n,fromEl){
   var before=SW().pearls; SW().pearls+=n; if(G.stats) G.stats.pearls+=n;
   flyPearls(Math.min(6,Math.ceil(n/3)),fromEl); floatText('+'+n,fromEl);
-  setTimeout(function(){ countTo($('pearlCount'),before,SW().pearls,600); renderLevelBar(false); },500);
+  var who=P.current, after=SW().pearls, lv0=levels(), where=W().where;
+  setTimeout(function(){ if(P.current!==who) return; countTo($('pearlCount'),before,after,600); renderLevelBar(false); },500);
   var L0=levelFor(before), L1=levelFor(SW().pearls);
   if(L1>L0){ SW().wearLevel=null;
-    setTimeout(function(){ setOutfit(); renderScene(); renderLevelBar(true); SFX.unlock(); sceneParty(5000); bigConfetti();
-      for(var l=L0+1;l<=L1;l++){ var L=levels()[l-1]; Banners.push({kind:'unlock',title:'Level '+l+'!',sub:'New: '+L.o+', plus '+L.l+' '+W().where,svg:axoSVG({mood:'happy'}),level:l,ms:3200}); }
+    setTimeout(function(){ if(P.current!==who||levels()!==lv0) return; setOutfit(); renderScene(); renderLevelBar(true); SFX.unlock(); sceneParty(5000); bigConfetti();
+      for(var l=L0+1;l<=L1;l++){ var L=lv0[l-1]; Banners.push({kind:'unlock',title:'Level '+l+'!',sub:'New: '+L.o+', plus '+L.l+' '+where,svg:axoSVG({mood:'happy'}),level:l,ms:3200}); }
     },1300); }
   save();
 }
@@ -1134,7 +1139,7 @@ function buildQueue(only){
   return shuffle(p.slice(0,n).map(function(x){return x.w;}));
 }
 function startRound(mode,only){
-  clearTimeout(G.timer);
+  clearTimeout(G.timer); clearTimeout(G.vtimer);
   G.mode=mode; G.queue=buildQueue(only).map(function(w){return {w:w,retry:false,status:''};}); G.idx=0; G.retry=[]; G.streak=0;
   G.stats={first:0,fixed:0,missed:[],pearls:0,best:0,n:G.queue.length};
   if(!G.queue.length){ toast('No words to practice with these settings.'); return; }
@@ -1144,47 +1149,47 @@ function startRound(mode,only){
   nextWord();
 }
 function nextWord(){
-  clearTimeout(G.timer);
+  clearTimeout(G.timer); clearTimeout(G.vtimer);
   if(G.idx>=G.queue.length){
     if(G.retry.length){ toast("Let's try the tricky ones again!"); G.queue=G.queue.concat(G.retry.map(function(w){return {w:w,retry:true,status:''};})); G.retry=[]; }
     else { endRound(); return; }
   }
   var item=G.queue[G.idx]; G.cur=item.w; G.phase='answer'; G.hinted=0;
   wstat(G.cur.w).seen++;
-  $('main').scrollTop=0; renderDots(); $('roundLabel').textContent='Word '+(G.idx+1)+' of '+G.queue.length+(item.retry?' (again)':'')+' - '+gradeName();
-  ['infoBox','hintStrip','resultBox','lockinBox'].forEach(function(id){ $(id).hidden=true; });
+  $('main').scrollTop=0; renderDots(); $('roundLabel').innerHTML='Word '+(G.idx+1)+' of '+G.queue.length+(item.retry?' (again)':'')+'<span class="rl-grade"> - '+gradeName()+'</span>';
+  ['infoBox','hintStrip','resultBox','lockinBox'].forEach(function(id){ $(id).hidden=true; $(id).innerHTML=''; });
   $('checkBtn').disabled=false; $('hintBtn').disabled=false;
   bubble('playBubble', item.retry?"Let's get this one!":pick(W().listen));
   setMood('neutral');
   var inp=$('spellInput'); inp.value=''; inp.readOnly=false; inp.placeholder='type the word'; inp.className='spell-input';
-  if(G.mode==='tiles'){ setupTiles(G.cur.w); } else { refocus(); }
+  if(G.mode==='tiles'){ setupTiles(G.cur.w); } else { refocus(); if(isPhone()) setTimeout(function(){ try{ $('spellInput').scrollIntoView({block:'center'}); }catch(e){} },60); }
   if(!Voice.ok){ showInfo('<b>Meaning:</b> '+esc(G.cur.d)); }
-  G.timer=setTimeout(function(){ Voice.full(G.cur); },450);
+  G.vtimer=setTimeout(function(){ if(G.cur&&G.screen==='scr-play') Voice.full(G.cur); },450);
 }
 function refocus(){ if(G.mode!=='tiles'&&G.phase!=='done'){ try{ $('spellInput').focus({preventScroll:true}); }catch(e){} } }
 function showInfo(html){ $('infoBox').innerHTML=html; $('infoBox').hidden=false; }
 function renderDots(){ $('dots').innerHTML=G.queue.map(function(it,i){ return '<span class="dot '+it.status+(i===G.idx?' now':'')+'"></span>'; }).join(''); }
 function updateStreak(){ $('streakCount').textContent=G.streak; $('streakStat').classList.toggle('hot',G.streak>=3); }
-function currentAnswer(){ if(G.mode==='tiles') return G.tileSel.map(function(i){return G.tileLetters[i];}).join(''); return $('spellInput').value.trim().toLowerCase().replace(/[^a-z]/g,''); }
-function check(){
+function currentAnswer(){ if(G.mode==='tiles') return G.tileSel.map(function(i){return G.tileLetters[i];}).join(''); return $('spellInput').value.trim().replace(/[^a-zA-Z]/g,''); }
+function check(){ clearTimeout(G.ttimer);
   if(G.phase==='done'||!G.cur) return;
   var ans=currentAnswer();
   if(!ans){ bubble('playBubble', G.mode==='tiles'?'Tap the letters first!':'Type the word first!'); SFX.tick(); refocus(); return; }
-  if(ans===G.cur.w.toLowerCase()) onCorrect(); else onWrong(ans);
+  if(ans.toLowerCase()===G.cur.w.toLowerCase()) onCorrect(); else onWrong(ans);
 }
-function onCorrect(){
+function onCorrect(){ clearTimeout(G.vtimer);
   var w=G.cur, st=wstat(w.w), item=G.queue[G.idx], gain=0, ms=null;
   if(G.phase==='answer'){
-    gain=G.hinted?5:10; G.streak++; st.streak++; st.right++; S.totalCorrect++;
+    gain=item.retry?3:(G.hinted?5:10); if(!item.retry) G.streak++; st.streak++; st.right++; S.totalCorrect++;
     if(G.streak>S.bestStreak) S.bestStreak=G.streak; if(G.streak>G.stats.best) G.stats.best=G.streak;
     item.status=item.retry?'retry':'first'; if(item.retry) G.stats.fixed++; else G.stats.first++;
-    ms=W().milestones[G.streak];
-    if(ms){ gain+=ms.b; SFX.fanfare(); bigConfetti(); sceneParty(); Banners.push({title:ms.t,sub:G.streak+' in a row! +'+ms.b+' pearls'}); }
+    ms=item.retry?null:W().milestones[G.streak];
+    if(ms){ gain+=ms.b; SFX.fanfare(); bigConfetti(); sceneParty(); Banners.push({title:ms.t,sub:G.streak+' in a row! +'+ms.b+' bonus'}); }
     else { SFX.correct(); confettiBurst(1); sceneFlash(); bubbleBurst(); }
     bubble('playBubble',pick(W().praise));
     if(st.streak===3) setTimeout(function(){ toast('Mastered: '+w.w+'!'); },900);
   } else {
-    gain=4; SFX.correct(); confettiBurst(0.5); sceneFlash(); bubble('playBubble','Locked in! Nice fix.');
+    gain=2; SFX.correct(); confettiBurst(0.5); sceneFlash(); bubble('playBubble','Locked in! Nice fix.');
   }
   G.phase='done'; $('checkBtn').disabled=true; $('hintBtn').disabled=true;
   $('spellInput').readOnly=true; $('spellInput').className='spell-input ok';
@@ -1194,7 +1199,7 @@ function onCorrect(){
   setMood('happy'); jump('axoPlay'); updateStreak(); save();
   G.timer=setTimeout(function(){ G.idx++; nextWord(); }, ms?2800:1900);
 }
-function onWrong(ans){
+function onWrong(ans){ clearTimeout(G.vtimer);
   var w=G.cur, st=wstat(w.w), item=G.queue[G.idx];
   SFX.wrong(); setMood('oops'); shake('axoPlay');
   if(G.phase==='answer'){
@@ -1204,21 +1209,21 @@ function onWrong(ans){
     if(!item.retry) G.retry.push(w);
     G.phase='lockin'; bubble('playBubble',pick(W().oops));
   } else { bubble('playBubble','Look at the green letters and try once more.'); }
-  showDiff(ans,w.w.toLowerCase()); revealFeedback();
+  showDiff(ans,w.w); revealFeedback();
   $('hintStrip').hidden=true; $('infoBox').hidden=true;
   $('lockinBox').hidden=false;
   $('lockinBox').innerHTML='<div class="lock-label">Now spell it to lock it in</div><div class="lock-word">'+esc(w.w)+'</div>';
   if(G.mode==='tiles'){ setupTiles(w.w); }
   else { var inp=$('spellInput'); inp.value=''; inp.placeholder=w.w; inp.className='spell-input bad'; setTimeout(function(){ inp.className='spell-input'; refocus(); },500); }
-  setTimeout(function(){ Voice.spell(w); },300);
+  setTimeout(function(){ if(G.cur===w&&G.screen==='scr-play') Voice.spell(w); },300);
   save();
 }
 function diffLetters(a,b){
   var n=a.length,m=b.length,dp=[],i,j;
   for(i=0;i<=n;i++){ dp[i]=[]; for(j=0;j<=m;j++) dp[i][j]=0; }
-  for(i=n-1;i>=0;i--) for(j=m-1;j>=0;j--) dp[i][j]=a[i]===b[j]?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);
+  for(i=n-1;i>=0;i--) for(j=m-1;j>=0;j--) dp[i][j]=a[i].toLowerCase()===b[j].toLowerCase()?dp[i+1][j+1]+1:Math.max(dp[i+1][j],dp[i][j+1]);
   var A=[],B=[]; i=0; j=0;
-  while(i<n&&j<m){ if(a[i]===b[j]){ A.push({ch:a[i],ok:true}); B.push({ch:b[j],ok:true}); i++; j++; }
+  while(i<n&&j<m){ if(a[i].toLowerCase()===b[j].toLowerCase()){ A.push({ch:a[i],ok:true}); B.push({ch:b[j],ok:true}); i++; j++; }
     else if(dp[i+1][j]>=dp[i][j+1]){ A.push({ch:a[i],ok:false}); i++; } else { B.push({ch:b[j],ok:false}); j++; } }
   while(i<n){ A.push({ch:a[i],ok:false}); i++; } while(j<m){ B.push({ch:b[j],ok:false}); j++; }
   return {A:A,B:B};
@@ -1238,16 +1243,16 @@ function showResult(word){
 }
 /* tile mode */
 function scramble(word){ var a=word.split(''); for(var t=0;t<12;t++){ shuffle(a); if(a.join('')!==word) break; } return a; }
-function setupTiles(word){ G.tileLetters=scramble(word); G.tileSel=[]; renderTiles(); }
+function setupTiles(word){ G.tileLetters=scramble(word.toLowerCase()); G.tileSel=[]; renderTiles(); }
 function renderTiles(){
   var len=G.cur.w.length, s='';
   for(var i=0;i<len;i++){ var ti=G.tileSel[i]; s+='<button type="button" class="tile slot'+(ti==null?' empty':'')+'" data-i="'+i+'" aria-label="letter '+(i+1)+'">'+(ti==null?'':esc(G.tileLetters[ti]))+'</button>'; }
   $('slots').innerHTML=s;
   $('tiles').innerHTML=G.tileLetters.map(function(ch,i){ var used=G.tileSel.indexOf(i)>=0; return '<button type="button" class="tile pick'+(used?' used':'')+'" data-i="'+i+'"'+(used?' disabled':'')+'>'+esc(ch)+'</button>'; }).join('');
 }
-function pickTile(i){ if(G.phase==='done'||G.tileSel.indexOf(i)>=0||G.tileSel.length>=G.cur.w.length) return; G.tileSel.push(i); SFX.pop(); renderTiles(); if(G.tileSel.length===G.cur.w.length) setTimeout(check,260); }
-function unpickSlot(i){ if(G.phase==='done'||i>=G.tileSel.length) return; G.tileSel.splice(i,1); SFX.tick(); renderTiles(); }
-function tileKey(e){
+function pickTile(i){ if(G.phase==='done'||G.tileSel.indexOf(i)>=0||G.tileSel.length>=G.cur.w.length) return; G.tileSel.push(i); SFX.pop(); renderTiles(); clearTimeout(G.ttimer); if(G.tileSel.length===G.cur.w.length) G.ttimer=setTimeout(function(){ if(G.cur&&G.screen==='scr-play'&&G.tileSel.length===G.cur.w.length) check(); },260); }
+function unpickSlot(i){ if(G.phase==='done'||i>=G.tileSel.length) return; clearTimeout(G.ttimer); G.tileSel.splice(i,1); SFX.tick(); renderTiles(); }
+function tileKey(e){ if(e.ctrlKey||e.metaKey||e.altKey) return;
   if(G.screen!=='scr-play'||G.mode!=='tiles'||G.phase==='done') return;
   if(e.key==='Backspace'){ if(G.tileSel.length){ G.tileSel.pop(); SFX.tick(); renderTiles(); } e.preventDefault(); return; }
   if(e.key==='Enter'){ if(e.target&&e.target.tagName==='BUTTON') return; check(); return; }
@@ -1258,7 +1263,7 @@ function hint(){
   var w=G.cur.w; G.hinted=Math.min(G.hinted+1,w.length-1);
   $('hintStrip').hidden=false;
   $('hintStrip').innerHTML=w.split('').map(function(ch,i){ return '<span class="h'+(i<G.hinted?' show':'')+'">'+(i<G.hinted?esc(ch):'&nbsp;')+'</span>'; }).join('');
-  if(G.mode==='tiles'){ var need=w[G.tileSel.length], idx=-1; for(var i=0;i<G.tileLetters.length;i++){ if(G.tileLetters[i]===need&&G.tileSel.indexOf(i)<0){ idx=i; break; } }
+  if(G.mode==='tiles'){ var need=w.toLowerCase()[G.tileSel.length], idx=-1; for(var i=0;i<G.tileLetters.length;i++){ if(G.tileLetters[i]===need&&G.tileSel.indexOf(i)<0){ idx=i; break; } }
     var t=document.querySelector('#tiles .tile[data-i="'+idx+'"]'); if(t) t.classList.add('glow'); }
   SFX.swoosh(); bubble('playBubble',G.hinted===1?'Here is a little help.':'One more peek!');
   Voice.say('It starts with '+w.slice(0,G.hinted).toUpperCase().split('').join(', '),0.8);
@@ -1268,12 +1273,12 @@ function endRound(){
   var st=G.stats, n=st.n, pct=n?st.first/n:0, k=pct>=0.9?3:pct>=0.6?2:1;
   show('scr-summary'); setMood('happy'); jump('axoSummary');
   $('bigStars').innerHTML=stars(k);
-  $('sumTitle').textContent=k===3?'Splash-tastic round!':k===2?'Great swimming!':'Good practice!';
-  $('sumStats').innerHTML='<div class="sum-stat"><b>'+st.first+' of '+n+'</b><span>Right first try</span></div><div class="sum-stat"><b>+'+st.pearls+'</b><span>Pearls earned</span></div><div class="sum-stat"><b>'+st.best+'</b><span>Best streak</span></div>';
+  $('sumTitle').textContent=W().sumTitles[3-k];
+  $('sumStats').innerHTML='<div class="sum-stat"><b>'+st.first+' of '+n+'</b><span>Right first try</span></div><div class="sum-stat"><b>+'+st.pearls+'</b><span>'+(world()==='candy'?'Sprinkles':'Pearls')+' earned</span></div><div class="sum-stat"><b>'+st.best+'</b><span>Best streak</span></div>';
   $('missedWrap').hidden=!st.missed.length; $('practiceMissed').hidden=!st.missed.length;
   $('missedList').innerHTML=st.missed.map(function(w){return '<span class="mw">'+esc(w.w)+'</span>';}).join('');
   SFX.fanfare(); bigConfetti(); save();
-  setTimeout(function(){ Voice.say(k===3?'Amazing! You are a spelling star!':k===2?'Great job! Keep swimming!':'Good practice. Come back and try again soon!',0.95); },400);
+  var sv=W().sumVoice[3-k]; setTimeout(function(){ if(G.screen==='scr-summary') Voice.say(sv,0.95); },400);
 }
 /* phones: keep the app inside the visible area when the keyboard is open, and keep feedback in view */
 function isPhone(){ return window.innerWidth<=720; }
@@ -1313,10 +1318,10 @@ function renderHome(){
 }
 function renderProfiles(){ var keepS=S, keepK=K_INK, html='';
   PLAYERS.forEach(function(p){ S=stateFor(p.id); K_INK=WORLDS[world()].ink; var lv=levelFor(SW().pearls);
-    html+='<button type="button" class="profile-card'+(p.id===P.current?' on':'')+'" data-id="'+p.id+'">'+axoSVG({plain:true,mood:'happy'})+'<span class="pc-name">'+esc(p.name)+'</span><span class="pc-sub">'+gradeName()+', level '+lv+'</span></button>'; });
+    html+='<button type="button" class="profile-card'+(p.id===(P.current||P.last)?' on':'')+'" data-id="'+p.id+'">'+axoSVG({plain:true,mood:'happy'})+'<span class="pc-name">'+esc(p.name)+'</span><span class="pc-sub">'+gradeName()+', level '+lv+'</span></button>'; });
   S=keepS; K_INK=keepK; $('profileGrid').innerHTML=html; }
-function showProfiles(){ clearTimeout(G.timer); Voice.stop(); G.cur=null; renderProfiles(); show('scr-profiles'); }
-function selectProfile(id){ var p=profileById(id); if(!p) return; P.current=id; saveProfiles(); loadState(id); S.kid=p.name; save(); applyWorld(); renderSound(); renderHome(); show('scr-home'); }
+function showProfiles(){ clearTimeout(G.timer); clearTimeout(G.vtimer); clearTimeout(G.ttimer); Voice.stop(); G.cur=null; renderProfiles(); show('scr-profiles'); }
+function selectProfile(id){ var p=profileById(id); if(!p) return; P.current=id; wordSel=null; wordFilter='all'; $('wordDetail').innerHTML='<p class="hint-text">Tap a word to hear it and see what it means.</p>'; saveProfiles(); loadState(id); S.kid=p.name; save(); applyWorld(); renderSound(); renderHome(); show('scr-home'); }
 /* hover previews: show a world's whole look without changing anything */
 function previewWorld(w,st){ var keepS=S; if(st) S=st; var keepG=S.grade; S.grade=(w==='candy')?'4':'3';
   var D=W(); document.documentElement.setAttribute('data-world',w); K_INK=D.ink; $('brand').textContent=D.brand;
@@ -1365,7 +1370,7 @@ function setGrade(g){ if(g===S.grade) return; S.grade=g; S.gradePicked=true; sav
   applyWorld(); renderHome(); if(G.screen==='scr-words') renderWords(); SFX.warm(); SFX.pop(); jump('axoHome'); toast(W().brand+': '+gradeName()+' words'); }
 function renderSound(){ $('soundBtn').classList.toggle('off',!S.sound); $('soundBtn').setAttribute('aria-label','Sound effects '+(S.sound?'on':'off'));
   var w=document.querySelectorAll('#soundBtn .wave'); for(var i=0;i<w.length;i++) w[i].style.display=S.sound?'':'none'; }
-function goHome(){ clearTimeout(G.timer); Voice.stop(); G.cur=null; G.streak=0; updateStreak(); setMood('neutral'); renderHome(); show('scr-home'); }
+function goHome(){ clearTimeout(G.timer); clearTimeout(G.vtimer); clearTimeout(G.ttimer); Voice.stop(); G.cur=null; G.streak=0; updateStreak(); setMood('neutral'); renderHome(); show('scr-home'); }
 
 /* wiring */
 var modes=document.querySelectorAll('.mode-btn');
@@ -1376,7 +1381,7 @@ $('switchBtn').addEventListener('click',function(){ SFX.warm(); showProfiles(); 
 $('profileGrid').addEventListener('click',function(e){ var b=e.target.closest('.profile-card'); if(!b) return; SFX.warm(); Voice.warm(); selectProfile(b.getAttribute('data-id')); SFX.pop(); jump('axoHome'); toast('Hi, '+S.kid+'!'); });
 $('resetBtn').addEventListener('click',function(){ $('resetConfirm').hidden=false; });
 $('resetNo').addEventListener('click',function(){ $('resetConfirm').hidden=true; });
-$('resetYes').addEventListener('click',function(){ var keep={kid:S.kid,charLagoon:S.charLagoon,charCandy:S.charCandy,grade:S.grade,sound:S.sound}; S=Object.assign(defaults(),keep); save(); $('resetConfirm').hidden=true; applyWorld(); renderHome(); toast('Progress erased. Fresh start!'); });
+$('resetYes').addEventListener('click',function(){ var keep={kid:S.kid,charLagoon:S.charLagoon,charCandy:S.charCandy,grade:S.grade,gradePicked:S.gradePicked,roundLen:S.roundLen,sound:S.sound}; S=Object.assign(defaults(),keep); save(); $('resetConfirm').hidden=true; applyWorld(); renderHome(); toast('Progress erased. Fresh start!'); });
 $('roundLen').addEventListener('change',function(){ S.roundLen=$('roundLen').value; save(); });
 $('levelGrid').addEventListener('click',function(e){ var b=e.target.closest('.level-card'); if(!b||b.disabled) return; SW().wearLevel=parseInt(b.getAttribute('data-lv'),10); save(); setOutfit(); renderLevels(); SFX.warm(); SFX.pop(); jump('axoHome'); });
 $('soundBtn').addEventListener('click',function(){ S.sound=!S.sound; save(); renderSound(); if(S.sound){ SFX.warm(); SFX.pop(); } });
@@ -1386,7 +1391,7 @@ $('hearBtn').addEventListener('click',function(){ if(G.cur){ Voice.full(G.cur); 
 $('sentBtn').addEventListener('click',function(){ if(!G.cur) return; Voice.sentence(G.cur); showInfo('<b>Sentence:</b> '+esc(G.cur.s.replace(new RegExp(G.cur.w,'ig'),'____'))); refocus(); });
 $('meanBtn').addEventListener('click',function(){ if(!G.cur) return; Voice.meaning(G.cur); showInfo('<b>Meaning:</b> '+esc(G.cur.d)); refocus(); });
 $('hintBtn').addEventListener('click',hint);
-$('clearBtn').addEventListener('click',function(){ if(G.mode==='tiles'&&G.phase!=='done'){ G.tileSel=[]; renderTiles(); SFX.tick(); } });
+$('clearBtn').addEventListener('click',function(){ if(G.mode==='tiles'&&G.phase!=='done'){ clearTimeout(G.ttimer); G.tileSel=[]; renderTiles(); SFX.tick(); } });
 $('tiles').addEventListener('click',function(e){ var b=e.target.closest('.tile.pick'); if(b&&!b.disabled) pickTile(parseInt(b.getAttribute('data-i'),10)); });
 $('slots').addEventListener('click',function(e){ var b=e.target.closest('.tile.slot'); if(b) unpickSlot(parseInt(b.getAttribute('data-i'),10)); });
 document.addEventListener('keydown',tileKey);
@@ -1411,7 +1416,7 @@ if(HOVER){
 
 /* small handle for automated tests */
 window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},world:world,save:save,startRound:startRound,levelFor:levelFor,WORDS3:WORDS3,WORDS4:WORDS4};
-function boot(){ loadProfiles(); applyWorld(); renderSound(); showProfiles(); }
+function boot(){ loadProfiles(); P.last=P.current; P.current=null; applyWorld(); renderSound(); showProfiles(); }
 var hot=window.claude&&window.claude.hot;
 if(hot&&typeof hot.ready==='function'){ hot.ready(boot); } else { boot(); }
 try{ if(hot&&typeof hot.snapshot==='function') hot.snapshot(function(){ return {screen:G.screen}; }); }catch(e){}
