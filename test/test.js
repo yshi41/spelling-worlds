@@ -14,7 +14,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.setViewport({ width: 1200, height: 900 });
   await page.goto(URL, { waitUntil: 'load' });
   await sleep(300);
-  await page.evaluate(() => { localStorage.setItem('spelling-worlds-charlie', JSON.stringify({ restoredId: 'r20260927' })); localStorage.setItem('spelling-worlds-riley', JSON.stringify({ restoredId: 'r20260927b' })); });
+  await page.evaluate(() => { localStorage.setItem('spelling-worlds-charlie', JSON.stringify({ restoredId: 'r20260927' })); });
   await page.reload({ waitUntil: 'load' }); await sleep(600);
   const text = (sel) => page.$eval(sel, el => el.textContent.trim());
   const visible = (sel) => page.$eval(sel, el => !el.hidden && el.offsetParent !== null);
@@ -303,8 +303,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   ok((await T()).pearls >= 1458 && await text('#lbLevel') === 'Level 10' && await world() === 'candy', 'Charlie is back at level 10 in the candy world');
   ok(await page.evaluate(() => JSON.parse(localStorage.getItem('spelling-worlds-charlie')).restoredId === 'r20260927'), 'restore is saved and applies only once');
 
-  await page.evaluate(() => { localStorage.removeItem('spelling-worlds-riley'); }); await page.reload({ waitUntil: 'load' }); await sleep(500);
-  ok((await text('.profile-card[data-id="riley"] .pc-sub')).indexOf('3rd grade, level 5') >= 0, 'Riley is at level 5 in the lagoon');
+  await page.evaluate(() => { localStorage.setItem('spelling-worlds-riley', JSON.stringify({ restoredId: 'r20260927b', worlds: { lagoon: { pearls: 360, wearLevel: null }, candy: { pearls: 0, wearLevel: null } } })); }); await page.reload({ waitUntil: 'load' }); await sleep(500);
+  ok((await text('.profile-card[data-id="riley"] .pc-sub')).indexOf('3rd grade, level 3') >= 0, 'the level 5 raise is undone: Riley back at level 3, keeping 10 earned since');
+  await page.click('.profile-card[data-id="riley"]'); await sleep(400); ok((await T()).pearls === 171, 'Riley has 171 pearls');
 
   console.log('13. Errors');
   ok(errors.length === 0, 'no page errors' + (errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''));
