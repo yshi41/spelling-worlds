@@ -703,7 +703,7 @@ var WORDS4=[
 {w:'rigid',d:'stiff; not able to bend',s:'The rigid metal bar would not bend at all.'},
 {w:'salary',d:'the money someone is paid for a job',s:'She earns a good salary as a nurse.'},
 {w:'lounge',d:'a comfortable room for relaxing',s:'We waited in the lounge until the show started.'},
-{w:'december',d:'the twelfth and last month of the year',s:'We decorate the house in december.'},
+{w:'December',d:'the twelfth and last month of the year',s:'We decorate the house in December.'},
 {w:'business',d:'a company, or the work of buying and selling',s:'My aunt runs a small bakery business.'},
 {w:'versus',d:'against',s:'Tonight the game is our school versus the Tigers.'},
 {w:'tissues',d:'soft, thin paper for wiping your nose',s:'Grab some tissues if you need to sneeze.'},
@@ -790,7 +790,7 @@ function loadProfiles(){ try{ P.current=localStorage.getItem(PKEY)||null; }catch
 function saveProfiles(){ try{ if(P.current) localStorage.setItem(PKEY,P.current); }catch(e){} }
 function readState(id){ try{ var raw=localStorage.getItem(pkey(id)); if(raw) return Object.assign(defaults(),JSON.parse(raw)); }catch(e){} return null; }
 function stateFor(id){ var st=readState(id)||defaults(); if(!st.gradePicked){ var p=profileById(id); if(p) st.grade=p.grade; } return st; }
-function loadState(id){ S=stateFor(id); if(S.words.December&&!S.words.december){ S.words.december=S.words.December; delete S.words.December; } }
+function loadState(id){ S=stateFor(id); if(S.words.december&&!S.words.December){ S.words.December=S.words.december; delete S.words.december; } }
 function save(){ if(!P.current) return; try{ localStorage.setItem(pkey(P.current),JSON.stringify(S)); }catch(e){} }
 function wstat(w){if(!S.words[w])S.words[w]={streak:0,right:0,wrong:0,seen:0};return S.words[w];}
 
