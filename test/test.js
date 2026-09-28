@@ -28,7 +28,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   console.log('1. Player screen');
   ok(await visible('#scr-profiles'), 'player screen shown first');
-  ok(await count('.profile-card') === 2, 'two player cards');
+  ok(await count('.profile-card') === 3, 'three player cards');
+  ok((await text('.profile-card[data-id="vera"] .pc-sub')).startsWith('3rd grade'), 'Vera defaults to 3rd grade');
   ok((await text('.profile-card[data-id="charlie"] .pc-sub')).startsWith('4th grade'), 'Charlie defaults to 4th grade');
   ok((await text('.profile-card[data-id="riley"] .pc-sub')).startsWith('3rd grade'), 'Riley defaults to 3rd grade');
   ok(await world() === 'lagoon', 'default look is lagoon before choosing');
@@ -223,6 +224,36 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   ok(await stored() === q0 + 30, 'switching grades in another tab keeps the progress');
   await page2.close();
   await page.reload({ waitUntil: 'load' }); await sleep(500); await page.click('.profile-card[data-id="charlie"]'); await sleep(400);
+
+  console.log('10d. Vera and the rainforest');
+  await page.click('#switchBtn'); await sleep(300);
+  await page.hover('.profile-card[data-id="vera"]'); await sleep(250);
+  ok(await world() === 'canopy' && await text('#brand') === 'Spelling Canopy', 'hovering Vera previews the rainforest');
+  await away();
+  await page.click('.profile-card[data-id="vera"]'); await sleep(500);
+  ok(await world() === 'canopy' && await text('#playerName') === 'Vera', 'Vera lands in the rainforest');
+  ok(await text('#axoNameHome') === 'Sloth' && await attr('.char-chip.on', 'data-char') === 'sloth', 'Vera starts as a sloth');
+  ok(await count('.char-chip') === 6, 'six rainforest characters');
+  ok(await attr('.seg-btn.on', 'data-g') === '3', 'Vera on the 3rd grade list');
+  await page.hover('#gradeSeg .seg-btn[data-g="4"]'); await sleep(250);
+  ok(await world() === 'canopy', 'grade hover keeps the rainforest for Vera');
+  await page.click('#gradeSeg .seg-btn[data-g="4"]'); await away();
+  ok(await world() === 'canopy' && await text('#gradeLabel') === '4th grade', '4th grade words, still the rainforest');
+  await page.click('#gradeSeg .seg-btn[data-g="3"]'); await away();
+  for (const c of ['toucan', 'monkey', 'treefrog', 'jaguar', 'gotter', 'sloth']) { await page.click('.char-chip[data-char="' + c + '"]'); await sleep(120); }
+  ok(await text('#axoNameHome') === 'Sloth' && await count('#axoHome svg ellipse') > 5, 'every rainforest character draws');
+  await page.evaluate(() => { const w = __spelling.WORDS3.find(x => x.w === 'sloth'); __spelling.startRound('spell', [w]); }); await sleep(500);
+  ok(!/sloth/i.test(await page.evaluate(() => document.getElementById('app').innerText)), 'the word sloth is not shown while it is being tested');
+  await typeAnswer('sloth'); t = await T();
+  ok(t.phase === 'done' && t.pearls === 10, 'Vera earns 10 leaves');
+  ok(!/sloth/i.test(await page.evaluate(() => document.getElementById('app').innerText)), 'praise never names the word');
+  await page.evaluate(() => document.getElementById('quitBtn').click()); await sleep(300);
+  ok((await T()).pearls === 10 && (await page.evaluate(() => JSON.parse(localStorage.getItem('spelling-worlds-vera')).worlds.canopy.pearls)) === 10, 'Vera save is separate');
+  await page.evaluate(() => { __spelling.S.worlds.canopy.pearls = 1400; __spelling.save(); }); await page.reload({ waitUntil: 'load' }); await sleep(500);
+  await page.click('.profile-card[data-id="vera"]'); await sleep(600);
+  ok(await text('#lbLevel') === 'Level 10' && await count('#scene [data-lv="10"].on') > 0 && await count('#axoHome .acc.on') >= 5, 'rainforest level 10 shows its scenery and outfit');
+  await page.screenshot({ path: 'vera-10.png' });
+  await page.click('#switchBtn'); await sleep(300); await page.click('.profile-card[data-id="charlie"]'); await sleep(500);
 
   console.log('11. Sound toggle and reset');
   await page.click('#soundBtn'); await sleep(100);
