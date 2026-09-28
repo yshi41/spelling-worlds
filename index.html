@@ -836,7 +836,7 @@ function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 
 /* players: Charlie and Riley each keep a separate save in this browser */
-var PLAYERS=[{id:'charlie',name:'Charlie',grade:'4'},{id:'riley',name:'Riley',grade:'3'},{id:'vera',name:'Vera',grade:'3',theme:'canopy'}];
+var PLAYERS=[{id:'charlie',name:'Charlie',grade:'4'},{id:'riley',name:'Riley',grade:'3'},{id:'vera',name:'Vera',grade:'4',theme:'canopy'}];
 var PKEY='spelling-worlds-current', P={current:null};
 function pkey(id){ return 'spelling-worlds-'+id; }
 function defaults(){return {kid:'',charLagoon:'axolotl',charCandy:'bear',charCanopy:'sloth',grade:'3',sound:true,roundLen:'10',worlds:{lagoon:{pearls:0,wearLevel:null},candy:{pearls:0,wearLevel:null},canopy:{pearls:0,wearLevel:null}},words:{},bestStreak:0,totalCorrect:0,epoch:0};}
