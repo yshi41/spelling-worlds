@@ -28,8 +28,9 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   console.log('1. Player screen');
   ok(await visible('#scr-profiles'), 'player screen shown first');
-  ok(await count('.profile-card') === 3, 'three player cards');
+  ok(await count('.profile-card') === 4, 'four player cards');
   ok((await text('.profile-card[data-id="vera"] .pc-sub')).startsWith('4th grade'), 'Vera defaults to 4th grade');
+  ok((await text('.profile-card[data-id="cora"] .pc-sub')).startsWith('4th grade'), 'Cora defaults to 4th grade');
   ok((await text('.profile-card[data-id="charlie"] .pc-sub')).startsWith('4th grade'), 'Charlie defaults to 4th grade');
   ok((await text('.profile-card[data-id="riley"] .pc-sub')).startsWith('3rd grade'), 'Riley defaults to 3rd grade');
   ok(await world() === 'lagoon', 'default look is lagoon before choosing');
@@ -253,6 +254,34 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.click('.profile-card[data-id="vera"]'); await sleep(600);
   ok(await text('#lbLevel') === 'Level 10' && await count('#scene [data-lv="10"].on') > 0 && await count('#axoHome .acc.on') >= 5, 'rainforest level 10 shows its scenery and outfit');
   await page.screenshot({ path: 'vera-10.png' });
+  await page.click('#switchBtn'); await sleep(300); await page.click('.profile-card[data-id="charlie"]'); await sleep(500);
+
+  console.log('10e. Cora and the ocean');
+  await page.click('#switchBtn'); await sleep(300);
+  await page.hover('.profile-card[data-id="cora"]'); await sleep(250);
+  ok(await world() === 'ocean' && await text('#brand') === 'Spelling Ocean', 'hovering Cora previews the ocean');
+  await away();
+  await page.click('.profile-card[data-id="cora"]'); await sleep(500);
+  ok(await world() === 'ocean' && await text('#playerName') === 'Cora', 'Cora lands in the ocean');
+  ok(await text('#axoNameHome') === 'Jellyfish' && await attr('.char-chip.on', 'data-char') === 'jellyfish', 'Cora starts as a jellyfish');
+  ok(await count('.char-chip') === 6, 'six ocean characters');
+  ok(await attr('.seg-btn.on', 'data-g') === '4', 'Cora on the 4th grade list');
+  await page.hover('#gradeSeg .seg-btn[data-g="3"]'); await sleep(250);
+  ok(await world() === 'ocean', 'grade hover keeps the ocean for Cora');
+  await page.click('#gradeSeg .seg-btn[data-g="3"]'); await away();
+  ok(await world() === 'ocean' && await text('#gradeLabel') === '3rd grade', '3rd grade words, still the ocean');
+  await page.click('#gradeSeg .seg-btn[data-g="4"]'); await away();
+  for (const c of ['octopus', 'seahorse', 'clownfish', 'narwhal', 'pufferfish', 'jellyfish']) { await page.click('.char-chip[data-char="' + c + '"]'); await sleep(120); }
+  ok(await text('#axoNameHome') === 'Jellyfish' && await count('#axoHome svg path') > 5, 'every ocean character draws');
+  await page.evaluate(() => { const w = __spelling.WORDS4.find(x => x.w === 'lunar'); __spelling.startRound('spell', [w]); }); await sleep(500);
+  await typeAnswer('lunar'); t = await T();
+  ok(t.phase === 'done' && t.pearls === 10, 'Cora earns 10 bubbles');
+  await page.evaluate(() => document.getElementById('quitBtn').click()); await sleep(300);
+  ok((await T()).pearls === 10 && (await page.evaluate(() => JSON.parse(localStorage.getItem('spelling-worlds-cora')).worlds.ocean.pearls)) === 10, 'Cora save is separate');
+  await page.evaluate(() => { __spelling.S.worlds.ocean.pearls = 1400; __spelling.save(); }); await page.reload({ waitUntil: 'load' }); await sleep(500);
+  await page.click('.profile-card[data-id="cora"]'); await sleep(600);
+  ok(await text('#lbLevel') === 'Level 10' && await count('#scene [data-lv="10"].on') > 0 && await count('#axoHome .acc.on') >= 5, 'ocean level 10 shows its scenery and outfit');
+  await page.screenshot({ path: 'cora-10.png' });
   await page.click('#switchBtn'); await sleep(300); await page.click('.profile-card[data-id="charlie"]'); await sleep(500);
 
   console.log('11. Sound toggle and reset');
