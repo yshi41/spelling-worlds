@@ -403,7 +403,7 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
   .summary-grid{grid-template-columns:1fr}
   .summary-grid .axo-box{max-width:180px}
 }
-@media (max-width:720px){
+@media (max-width:720px), (max-height:500px){
   .stage{grid-template-columns:1fr}
   .axo-side{flex-direction:row;justify-content:center;align-items:center}
   .axo-side .axo-box{width:104px;flex:0 0 auto}
@@ -431,7 +431,7 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 html{-webkit-text-size-adjust:100%}
 button,.tile,.chip,.seg-btn{touch-action:manipulation}
 .tile{user-select:none;-webkit-user-select:none}
-@media (max-width:720px){
+@media (max-width:720px), (max-height:500px){
   .tile{width:clamp(40px,10.5vw,54px);height:clamp(48px,12.5vw,62px)}
   .tile-row{gap:7px}
   .listen-row .btn{flex:1 1 auto}
@@ -454,7 +454,7 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
   .home-grid,.words-grid,.summary-grid{grid-template-columns:minmax(0,1fr)}
   .home-panel,.home-axo,.word-detail{min-width:0}
 }
-@media (max-width:720px){ .stage{grid-template-columns:minmax(0,1fr)} .word-card,.axo-side{min-width:0} }
+@media (max-width:720px), (max-height:500px){ .stage{grid-template-columns:minmax(0,1fr)} .word-card,.axo-side{min-width:0} }
 .char-row{min-width:0;max-width:100%}
 
 /* players */
@@ -478,7 +478,7 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
 
 /* phones: the app follows the visible area when the keyboard is open, and the play screen gets compact */
 #app{height:var(--vvh,100%)}
-@media (max-width:720px){
+@media (max-width:720px), (max-height:500px){
   .topbar{padding:6px 12px}
   .brand{font-size:1rem}
   #app[data-screen="scr-play"] .levelbar{display:none}
@@ -510,9 +510,20 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
 }
 .level-card .lc-q{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-family:var(--display),sans-serif;font-weight:700;font-size:2.1rem;background:var(--gold);color:var(--gold-ink);margin:6px 0}
 .level-card.mystery{opacity:.85}
-@media (max-width:720px){ .rl-grade{display:none} .play-top{flex-wrap:nowrap} .dots{flex:1;min-width:0;overflow:hidden;flex-wrap:nowrap;padding:5px} .notice{font-size:.85rem;padding:6px 10px} }
+@media (max-width:720px), (max-height:500px){ .rl-grade{display:none} .play-top{flex-wrap:nowrap} .dots{flex:1;min-width:0;overflow:hidden;flex-wrap:nowrap;padding:5px} .notice{font-size:.85rem;padding:6px 10px} }
 
 #app[data-screen="scr-play"] #lbNext{visibility:hidden}
+
+/* phones: tile mode has no keyboard, so its buttons sit in one normal row under the tiles */
+@media (max-width:720px), (max-height:500px){
+  #app[data-mode="tiles"] .action-row{position:static;margin:0;padding:0;background:none;flex-wrap:nowrap}
+  #app[data-mode="tiles"] .action-row .btn-big{width:auto;flex:1}
+  #app[data-mode="tiles"] .action-row #clearBtn{flex:0 0 auto}
+  .toast{bottom:auto;top:calc(58px + env(safe-area-inset-top,0px) + var(--vvtop,0px))}
+}
+@media (max-width:380px){ .listen-row{grid-template-columns:repeat(2,minmax(0,1fr))} }
+.seg-btn{min-height:40px}
+.banner{inset:auto;left:0;right:0;top:var(--vvtop,0px);height:var(--vvh,100%)}
 
 /* levels 11-20 motion */
 .scene .balloon{animation:balloonup var(--d,16s) linear infinite;animation-delay:var(--dl,0s)}
@@ -1395,7 +1406,7 @@ function startRound(mode,only){
   G.stats={first:0,fixed:0,missed:[],pearls:0,best:0,n:G.queue.length};
   if(!G.queue.length){ toast('No words to practice with these settings.'); return; }
   updateStreak(); show('scr-play'); setMood('neutral');
-  var tiles=(mode==='tiles'); $('tileArea').hidden=!tiles; $('spellForm').hidden=tiles; $('clearBtn').hidden=!tiles;
+  var tiles=(mode==='tiles'); $('app').setAttribute('data-mode',mode); $('tileArea').hidden=!tiles; $('spellForm').hidden=tiles; $('clearBtn').hidden=!tiles;
   $('voiceNotice').hidden=Voice.ok;
   nextWord();
 }
@@ -1413,7 +1424,7 @@ function nextWord(){
   bubble('playBubble', item.retry?"Let's get this one!":pick(W().listen));
   setMood('neutral');
   var inp=$('spellInput'); inp.value=''; inp.readOnly=false; inp.placeholder='type the word'; inp.className='spell-input';
-  if(G.mode==='tiles'){ setupTiles(G.cur.w); } else { refocus(); if(isPhone()) setTimeout(function(){ try{ $('spellInput').scrollIntoView({block:'center'}); }catch(e){} },60); }
+  if(G.mode==='tiles'){ setupTiles(G.cur.w); if(isPhone()) setTimeout(function(){ try{ $('checkBtn').scrollIntoView({block:'end'}); }catch(e){} },60); } else { refocus(); if(isPhone()) setTimeout(function(){ try{ $('spellInput').scrollIntoView({block:'center'}); }catch(e){} },60); }
   if(!Voice.ok){ showInfo('<b>Meaning:</b> '+esc(G.cur.d)); }
   G.vtimer=setTimeout(function(){ if(G.cur&&G.screen==='scr-play') Voice.full(G.cur); },450);
 }
@@ -1532,10 +1543,10 @@ function endRound(){
   var sv=W().sumVoice[3-k]; setTimeout(function(){ if(G.screen==='scr-summary') Voice.say(sv,0.95); },400);
 }
 /* phones: keep the app inside the visible area when the keyboard is open, and keep feedback in view */
-function isPhone(){ return window.innerWidth<=720; }
+function isPhone(){ return window.innerWidth<=720||window.innerHeight<=500; }
 function revealFeedback(){ if(!isPhone()) return; setTimeout(function(){ try{ $('resultBox').scrollIntoView({block:'start',behavior:'smooth'}); }catch(e){} },80); }
 (function(){ var vv=window.visualViewport; if(!vv) return; var app=$('app'), t=null;
-  function fit(){ var h=Math.round(vv.height); document.documentElement.style.setProperty('--vvh',h+'px'); app.style.transform=vv.offsetTop>1?'translateY('+Math.round(vv.offsetTop)+'px)':'';
+  function fit(){ var h=Math.round(vv.height); document.documentElement.style.setProperty('--vvh',h+'px'); document.documentElement.style.setProperty('--vvtop',Math.round(vv.offsetTop)+'px'); app.style.transform=vv.offsetTop>1?'translateY('+Math.round(vv.offsetTop)+'px)':'';
     var a=document.activeElement; if(a&&a.id==='spellInput'&&isPhone()){ clearTimeout(t); t=setTimeout(function(){ try{ a.scrollIntoView({block:'center'}); }catch(e){} },60); } }
   vv.addEventListener('resize',fit); vv.addEventListener('scroll',fit); fit(); })();
 
