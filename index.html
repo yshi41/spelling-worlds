@@ -513,6 +513,23 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
 @media (max-width:720px){ .rl-grade{display:none} .play-top{flex-wrap:nowrap} .dots{flex:1;min-width:0;overflow:hidden;flex-wrap:nowrap;padding:5px} .notice{font-size:.85rem;padding:6px 10px} }
 
 #app[data-screen="scr-play"] #lbNext{visibility:hidden}
+
+/* levels 11-20 motion */
+.scene .balloon{animation:balloonup var(--d,16s) linear infinite;animation-delay:var(--dl,0s)}
+@keyframes balloonup{from{transform:translateY(0)}to{transform:translateY(-980px)}}
+.scene .shoot{opacity:0;animation:shoot 7s linear infinite;animation-delay:var(--dl,0s)}
+@keyframes shoot{0%{opacity:0;transform:translate(0,0)}4%{opacity:1}12%{opacity:0;transform:translate(260px,100px)}100%{opacity:0;transform:translate(260px,100px)}}
+.scene .firework{transform-box:fill-box;transform-origin:50% 50%;animation:firework 2.4s ease-out infinite;animation-delay:var(--dl,0s)}
+@keyframes firework{0%{transform:scale(.1);opacity:0}20%{opacity:1}70%{transform:scale(1);opacity:.9}100%{transform:scale(1.15);opacity:0}}
+.scene .aurora{animation:aurora 8s ease-in-out infinite alternate;animation-delay:var(--dl,0s)}
+@keyframes aurora{from{transform:translateX(-40px);opacity:.15}to{transform:translateX(40px);opacity:.4}}
+.scene .hotair{animation:hotair 6s ease-in-out infinite}
+@keyframes hotair{0%,100%{transform:translate(0,0)}50%{transform:translate(30px,-26px)}}
+.scene .parade{animation:parade 40s linear infinite}
+@keyframes parade{from{transform:translateX(1250px)}to{transform:translateX(-800px)}}
+.axo .heart{animation:heartup 3s ease-in infinite;animation-delay:var(--dl,0s)}
+@keyframes heartup{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(-60px);opacity:0}}
+.level-card .heart,.char-chip .heart,.profile-card .heart{animation:none}
 [data-world="candy"] .pearl-fly{width:9px;height:22px;border-radius:5px;background:var(--accent);box-shadow:0 0 8px rgba(240,70,140,.6)}
 </style>
 <div class="scene" id="scene" aria-hidden="true"></div>
@@ -821,6 +838,25 @@ WORLDS.canopy={brand:'Spelling Canopy',sumTitles:['Tree-mendous round!','Great c
   listen:['Listen closely!','Here comes a word.','You can do this!','Nice and slow!','Here we go!'],
   milestones:{3:{t:'Vine Swing!',b:5},5:{t:'Leaf Storm!',b:10},10:{t:'Treetop Champion!',b:20},15:{t:'Jungle Legend!',b:30},20:{t:'Unstoppable!',b:50},30:{t:'Spelling Champion!',b:100}}};
 var CANOPY_CHARS=[['sloth','Sloth','Sloth'],['toucan','Toucan','Toucan'],['monkey','Monkey','Monkey'],['treefrog','Tree Frog','Frog'],['jaguar','Jaguar Cub','Jaguar'],['gotter','Giant Otter','Otter']];
+/* levels 11-20: same in every world, and each one also needs mastered words; level 20 means all 50 */
+var EXTRA_LEVELS=[
+ {p:1500,m:10,o:'Sparkle Trail',l:'floating balloons'},
+ {p:1700,m:15,o:'Tiny Buddy',l:'a full moon'},
+ {p:1900,m:20,o:'Golden Glow',l:'shooting stars'},
+ {p:2100,m:25,o:'Star Balloon',l:'a twinkling night sky'},
+ {p:2300,m:30,o:'Orbiting Stars',l:'fireworks'},
+ {p:2500,m:35,o:'Heart Bubbles',l:'northern lights'},
+ {p:2700,m:40,o:'Second Buddy',l:'a hot air balloon'},
+ {p:2900,m:44,o:'Diamond Sparkles',l:'glitter rain'},
+ {p:3100,m:48,o:'Superstar Medal',l:'a parade of friends'},
+ {p:3300,m:50,o:'Spelling Master Trophy',l:'a Spelling Master celebration'}
+];
+['lagoon','candy','canopy'].forEach(function(k){ WORLDS[k].levels=WORLDS[k].levels.concat(EXTRA_LEVELS); });
+SLOTS.feet=[11]; SLOTS.buddy1=[12]; SLOTS.glow2=[13]; SLOTS.balloon=[14]; SLOTS.orbit=[15]; SLOTS.hearts=[16]; SLOTS.buddy2=[17]; SLOTS.glitter=[18]; SLOTS.medal=[19]; SLOTS.trophy=[20];
+function isMastered(st){ return !!st&&(st.mastered||st.streak>=3); }
+function countMastered(list){ var n=0; for(var i=0;i<list.length;i++){ if(isMastered(S.words[list[i].w])) n++; } return n; }
+/* the best of the two lists, so switching grades never lowers a level */
+function masteredForLevels(){ return Math.max(countMastered(WORDS3),countMastered(WORDS4)); }
 /* recovered 2026-09-27 from the save an older tab overwrote */
 var RESTORE={charlie:{"id":"r20260927","worlds":{"lagoon":167,"candy":1458},"totalCorrect":140,"bestStreak":5,"words":{"buttons":{"streak":2,"right":2,"wrong":0,"seen":2},"tiptoed":{"streak":2,"right":2,"wrong":0,"seen":2},"burlap":{"streak":2,"right":2,"wrong":0,"seen":2},"butterflies":{"streak":2,"right":2,"wrong":0,"seen":2},"carefully":{"streak":2,"right":2,"wrong":0,"seen":2},"tractor":{"streak":2,"right":2,"wrong":0,"seen":2},"fickle":{"streak":2,"right":2,"wrong":0,"seen":2},"boycotting":{"streak":2,"right":2,"wrong":0,"seen":2},"woven":{"streak":3,"right":3,"wrong":0,"seen":3},"custody":{"streak":2,"right":2,"wrong":0,"seen":2},"rigid":{"streak":3,"right":3,"wrong":1,"seen":4},"salary":{"streak":2,"right":2,"wrong":0,"seen":2},"lounge":{"streak":2,"right":2,"wrong":0,"seen":2},"December":{"streak":3,"right":3,"wrong":1,"seen":4},"business":{"streak":4,"right":4,"wrong":2,"seen":6},"versus":{"streak":2,"right":2,"wrong":0,"seen":2},"tissues":{"streak":2,"right":3,"wrong":1,"seen":4},"cuddle":{"streak":2,"right":2,"wrong":0,"seen":2},"clever":{"streak":2,"right":2,"wrong":0,"seen":2},"wetlands":{"streak":2,"right":2,"wrong":0,"seen":2},"kelp":{"streak":2,"right":2,"wrong":0,"seen":2},"sniffling":{"streak":2,"right":2,"wrong":0,"seen":2},"permit":{"streak":2,"right":2,"wrong":0,"seen":2},"relief":{"streak":5,"right":7,"wrong":4,"seen":11},"molten":{"streak":2,"right":2,"wrong":0,"seen":2},"proclaim":{"streak":3,"right":3,"wrong":0,"seen":3},"granola":{"streak":2,"right":2,"wrong":0,"seen":2},"fierce":{"streak":2,"right":2,"wrong":0,"seen":2},"disappear":{"streak":2,"right":2,"wrong":0,"seen":2},"jovial":{"streak":2,"right":2,"wrong":0,"seen":2},"duration":{"streak":2,"right":2,"wrong":0,"seen":2},"reinstate":{"streak":3,"right":3,"wrong":1,"seen":4},"lullaby":{"streak":2,"right":2,"wrong":0,"seen":2},"marlin":{"streak":2,"right":2,"wrong":0,"seen":2},"puffy":{"streak":2,"right":2,"wrong":0,"seen":2},"basement":{"streak":2,"right":2,"wrong":0,"seen":2},"invite":{"streak":2,"right":2,"wrong":0,"seen":2},"property":{"streak":3,"right":4,"wrong":1,"seen":5},"beneath":{"streak":2,"right":2,"wrong":0,"seen":2},"awning":{"streak":2,"right":2,"wrong":0,"seen":2},"lunar":{"streak":3,"right":3,"wrong":0,"seen":3},"elite":{"streak":2,"right":2,"wrong":0,"seen":2},"thimble":{"streak":2,"right":2,"wrong":0,"seen":2},"warrior":{"streak":3,"right":3,"wrong":1,"seen":4},"laughter":{"streak":2,"right":2,"wrong":0,"seen":2},"hurdler":{"streak":2,"right":2,"wrong":0,"seen":2},"inferior":{"streak":3,"right":3,"wrong":1,"seen":4},"dictionary":{"streak":2,"right":2,"wrong":0,"seen":2},"examine":{"streak":4,"right":4,"wrong":2,"seen":6},"opposite":{"streak":3,"right":3,"wrong":1,"seen":4},"illness":{"streak":1,"right":1,"wrong":0,"seen":1},"sloth":{"streak":0,"right":0,"wrong":0,"seen":0},"parade":{"streak":0,"right":0,"wrong":0,"seen":0},"indoors":{"streak":0,"right":0,"wrong":0,"seen":0},"finish":{"streak":0,"right":0,"wrong":0,"seen":0},"stout":{"streak":0,"right":0,"wrong":0,"seen":0},"library":{"streak":0,"right":0,"wrong":0,"seen":0},"mustard":{"streak":0,"right":0,"wrong":0,"seen":0},"narrow":{"streak":0,"right":0,"wrong":0,"seen":0},"hiking":{"streak":0,"right":0,"wrong":0,"seen":0},"remember":{"streak":1,"right":1,"wrong":0,"seen":1},"source":{"streak":0,"right":1,"wrong":4,"seen":5},"beasts":{"streak":0,"right":0,"wrong":0,"seen":0},"grumpily":{"streak":0,"right":0,"wrong":0,"seen":0},"humble":{"streak":0,"right":0,"wrong":0,"seen":0},"distance":{"streak":0,"right":0,"wrong":0,"seen":0},"frazzled":{"streak":0,"right":0,"wrong":0,"seen":0},"lead":{"streak":1,"right":1,"wrong":0,"seen":1},"knit":{"streak":1,"right":1,"wrong":0,"seen":1},"whistle":{"streak":0,"right":0,"wrong":0,"seen":1},"trouble":{"streak":0,"right":0,"wrong":0,"seen":0},"holiday":{"streak":0,"right":0,"wrong":0,"seen":0},"spiders":{"streak":1,"right":1,"wrong":0,"seen":1},"guide":{"streak":0,"right":0,"wrong":0,"seen":0},"company":{"streak":1,"right":1,"wrong":0,"seen":1},"medium":{"streak":1,"right":1,"wrong":3,"seen":4},"foolish":{"streak":0,"right":0,"wrong":0,"seen":0},"result":{"streak":1,"right":1,"wrong":0,"seen":1},"pearls":{"streak":1,"right":1,"wrong":1,"seen":2},"shivering":{"streak":0,"right":0,"wrong":0,"seen":0},"smoothly":{"streak":1,"right":1,"wrong":1,"seen":2},"seventy":{"streak":1,"right":1,"wrong":2,"seen":3},"breeze":{"streak":1,"right":1,"wrong":0,"seen":1},"bamboo":{"streak":2,"right":2,"wrong":1,"seen":3},"groan":{"streak":0,"right":0,"wrong":0,"seen":0},"cloak":{"streak":0,"right":0,"wrong":0,"seen":0},"total":{"streak":0,"right":0,"wrong":0,"seen":0},"relax":{"streak":0,"right":0,"wrong":0,"seen":0},"safety":{"streak":0,"right":0,"wrong":0,"seen":0},"entire":{"streak":1,"right":1,"wrong":1,"seen":2},"hospital":{"streak":0,"right":0,"wrong":0,"seen":0},"ginger":{"streak":0,"right":0,"wrong":0,"seen":0},"pennies":{"streak":1,"right":1,"wrong":0,"seen":1},"afraid":{"streak":0,"right":0,"wrong":0,"seen":0},"charming":{"streak":0,"right":0,"wrong":0,"seen":0},"tangy":{"streak":0,"right":0,"wrong":0,"seen":0},"barge":{"streak":0,"right":0,"wrong":0,"seen":0},"cottage":{"streak":0,"right":0,"wrong":0,"seen":0},"dangle":{"streak":1,"right":1,"wrong":0,"seen":1},"soared":{"streak":0,"right":0,"wrong":0,"seen":0}}}};
 var PREVIEW=null;
@@ -829,7 +865,7 @@ function W(){ return WORLDS[world()]; }
 function levels(){ return W().levels; }
 function SW(){ if(!S.worlds) S.worlds={}; var k=world(); if(!S.worlds[k]) S.worlds[k]={pearls:0,wearLevel:null}; return S.worlds[k]; }
 function confettiColors(){ return W().confetti; }
-function levelFor(p){ var L=levels(), l=0; for(var i=0;i<L.length;i++){ if(p>=L[i].p) l=i+1; } return l; }
+function levelFor(p){ var L=levels(), m=masteredForLevels(), l=0; for(var i=0;i<L.length;i++){ if(p>=L[i].p&&m>=(L[i].m||0)) l=i+1; else break; } return l; }
 function wearLevel(){ var u=levelFor(SW().pearls), w=SW().wearLevel; return (w==null)?u:Math.min(w,u); }
 function pick(a){return a[Math.floor(Math.random()*a.length)];}
 function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
@@ -1083,10 +1119,30 @@ function canopyBottom(rnd){
   s+='<g data-lv="9">'+ff+'</g>';
   return s;
 }
+/* levels 11-20 scenery, drawn on top of every world */
+function extraScene(rnd){
+  var s='', i;
+  var bl=''; for(i=0;i<6;i++){ var bx=Math.round(120+i*190+rnd()*60), c=RAINBOW[i%6]; bl+='<g class="balloon" style="--d:'+(14+i*3)+'s;--dl:-'+(i*4)+'s"><ellipse cx="'+bx+'" cy="820" rx="22" ry="28" fill="'+c+'"/><path d="M'+bx+' 848 q6 20 0 40" stroke="#fff" stroke-width="2" fill="none"/></g>'; }
+  s+='<g data-lv="11">'+bl+'</g>';
+  s+='<g data-lv="14"><rect x="0" y="0" width="1200" height="420" fill="#1B2A5C" opacity=".35"/>'; for(i=0;i<30;i++) s+='<circle class="twinkle" style="--dl:-'+(rnd()*3).toFixed(1)+'s" cx="'+Math.round(rnd()*1200)+'" cy="'+Math.round(rnd()*380)+'" r="'+(1.5+rnd()*2).toFixed(1)+'" fill="#fff"/>'; s+='</g>';
+  s+='<g data-lv="12"><circle cx="1010" cy="120" r="70" fill="#FFF6D5" opacity=".25"/><circle cx="1010" cy="120" r="48" fill="#FFF6D5"/><circle cx="995" cy="108" r="8" fill="#EDE3BD"/><circle cx="1026" cy="132" r="6" fill="#EDE3BD"/></g>';
+  s+='<g data-lv="13">'; for(i=0;i<3;i++) s+='<g class="shoot" style="--dl:-'+(i*2.3)+'s"><line x1="'+(200+i*300)+'" y1="'+(60+i*40)+'" x2="'+(280+i*300)+'" y2="'+(90+i*40)+'" stroke="#fff" stroke-width="4" stroke-linecap="round"/></g>'; s+='</g>';
+  s+='<g data-lv="16">'; ['#7CF5C8','#B48CFF','#7CD4FF'].forEach(function(c,j){ s+='<path class="aurora" style="--dl:-'+(j*2)+'s" d="M-100 '+(120+j*40)+' Q300 '+(40+j*40)+' 600 '+(130+j*40)+' T1300 '+(110+j*40)+'" stroke="'+c+'" stroke-width="40" fill="none" opacity=".3" stroke-linecap="round"/>'; }); s+='</g>';
+  s+='<g data-lv="15">'; [[300,150,'#FFD23F'],[640,110,'#FF5C8A'],[930,170,'#7CD4FF']].forEach(function(f,j){ var r=''; for(var a=0;a<12;a++){ var t=a*Math.PI/6; r+='<line x1="'+f[0]+'" y1="'+f[1]+'" x2="'+Math.round(f[0]+Math.cos(t)*46)+'" y2="'+Math.round(f[1]+Math.sin(t)*46)+'" stroke="'+f[2]+'" stroke-width="4" stroke-linecap="round"/>'; } s+='<g class="firework" style="--dl:-'+(j*0.8)+'s">'+r+'</g>'; }); s+='</g>';
+  s+='<g data-lv="17"><g class="hotair"><path d="M250 140 a60 66 0 1 1 1 0 Z" fill="#FF9A3C"/><path d="M250 74 L250 206 M220 88 Q232 150 238 204 M280 88 Q268 150 262 204" stroke="#FFE24A" stroke-width="10" fill="none"/><path d="M238 210 L262 210 L258 232 L242 232 Z" fill="#8A5E33"/><path d="M236 204 L242 212 M264 204 L258 212" stroke="#5A3A22" stroke-width="2"/></g></g>';
+  var gl=''; for(i=0;i<30;i++) gl+='<rect class="drop" style="--d:'+(5+rnd()*5).toFixed(1)+'s;--dl:-'+(rnd()*9).toFixed(1)+'s" x="'+Math.round(rnd()*1200)+'" y="0" width="6" height="6" transform="rotate(45)" fill="'+['#fff','#FFE9A8','#C9F2FF'][i%3]+'"/>';
+  s+='<g data-lv="18">'+gl+'</g>';
+  var L=charList(), pr=''; for(i=0;i<L.length;i++){ var d=DRAW[L[i][0]](K_INK); pr+='<g transform="translate('+(i*120)+' 648) scale(.22)">'+d.back+d.main+'</g>'; }
+  s+='<g data-lv="19"><g class="parade">'+pr+'</g></g>';
+  s+='<g data-lv="20"><rect x="330" y="40" width="540" height="84" rx="42" fill="#F2C94C" stroke="#fff" stroke-width="6"/><text x="600" y="98" text-anchor="middle" font-family="Fredoka, Baloo 2, sans-serif" font-weight="700" font-size="48" fill="#5A4300">Spelling Master!</text>';
+  for(i=0;i<16;i++) s+='<rect class="drop" style="--d:'+(4+rnd()*4).toFixed(1)+'s;--dl:-'+(rnd()*8).toFixed(1)+'s" x="'+Math.round(rnd()*1200)+'" y="0" width="10" height="22" rx="3" fill="'+RAINBOW[i%6]+'"/>';
+  s+='</g>';
+  return s;
+}
 /* scene assembly and reward effects, picked by world */
 function buildScene(){ var k=world(), seed={lagoon:7,candy:11,canopy:5}[k]; function rnd(){ seed=(seed*9301+49297)%233280; return seed/233280; }
   var top={lagoon:lagoonTop,candy:candyTop,canopy:canopyTop}[k](rnd), bot={lagoon:lagoonBottom,candy:candyBottom,canopy:canopyBottom}[k](rnd);
-  return '<svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMax slice" aria-hidden="true">'+top+bot+'</svg><div class="flash" id="flash"></div>'; }
+  return '<svg viewBox="0 0 1200 800" preserveAspectRatio="xMidYMax slice" aria-hidden="true">'+top+bot+extraScene(rnd)+'</svg><div class="flash" id="flash"></div>'; }
 function renderScene(){ var lv=levelFor(SW().pearls), els=$('scene').querySelectorAll('[data-lv]');
   for(var i=0;i<els.length;i++){ els[i].classList.toggle('on',parseInt(els[i].getAttribute('data-lv'),10)<=lv); } }
 function sceneFlash(){ var f=$('flash'); if(!f) return; f.classList.remove('on'); void f.offsetWidth; f.classList.add('on'); }
@@ -1126,10 +1182,10 @@ var DRAW={};
 function charList(){ var k=world(); return k==='candy'?CANDY_CHARS:k==='canopy'?CANOPY_CHARS:LAGOON_CHARS; }
 function charInfo(id){ var L=charList(); for(var i=0;i<L.length;i++){ if(L[i][0]===id) return L[i]; } return L[0]; }
 function charId(){ var k=world(); return charInfo(k==='candy'?S.charCandy:k==='canopy'?S.charCanopy:S.charLagoon)[0]; }
-function axoSVG(opts){ opts=opts||{}; var p='axo'+(++axoCount), pc={lagoon:lagoonPieces,candy:candyPieces,canopy:canopyPieces}[world()](p), d=DRAW[opts.char||charId()](K_INK);
+function axoSVG(opts){ opts=opts||{}; var p='axo'+(++axoCount), pc={lagoon:lagoonPieces,candy:candyPieces,canopy:canopyPieces}[world()](p), d=DRAW[opts.char||charId()](K_INK), ex=opts.plain?null:extraPieces(p,opts.char||charId());
   return '<svg class="axo" viewBox="'+(opts.viewBox||'-15 -15 290 270')+'" data-mood="'+(opts.mood||'neutral')+'" aria-hidden="true">'
    +'<defs><clipPath id="'+p+'-hat"><path d="M130 6 L100 64 L160 64 Z"/></clipPath><clipPath id="'+p+'-cape"><path d="'+pc.capePath+'"/></clipPath></defs>'
-   +(opts.plain?'':pc.glow)+d.back+(opts.plain?'':pc.behind)+d.main+(opts.plain?'':pc.front)+'</svg>'; }
+   +(opts.plain?'':pc.glow+ex.behind)+d.back+(opts.plain?'':pc.behind)+d.main+(opts.plain?'':pc.front+ex.front)+'</svg>'; }
 function applyOutfit(root,level){ var els=root.querySelectorAll('.acc');
   for(var i=0;i<els.length;i++){ var lv=parseInt(els[i].getAttribute('data-lv'),10), tiers=SLOTS[els[i].getAttribute('data-slot')]||[lv], on=lv<=level;
     if(on){ for(var t=0;t<tiers.length;t++){ if(tiers[t]>lv&&tiers[t]<=level){ on=false; break; } } }
@@ -1260,6 +1316,24 @@ function canopyPieces(p){
   for(j=0;j<9;j++){ b=(200+j*17.5)*Math.PI/180; halo+=cnFlower(Math.round(130+Math.cos(b)*122),Math.round(120+Math.sin(b)*122),4,RAINBOW[j%6]); }
   return {capePath:cape, glow:glow, behind:behind, front:hats+neck+eyes+sh+wand+piece(10,'halo','halo1',halo)+piece(9,'aura','aura',aura)};
 }
+/* levels 11-20 character extras, shared by every world and every character */
+function extraPieces(p,ch){
+  function piece(lv,slot,cls,inner){ return '<g class="acc '+cls+'" data-lv="'+lv+'" data-slot="'+slot+'">'+inner+'</g>'; }
+  function mini(id,x){ var d=DRAW[id](K_INK); return '<g transform="translate('+x+' 190) scale(.27)">'+d.back+d.main+'</g>'; }
+  var L=charList(), idx=0; for(var i=0;i<L.length;i++){ if(L[i][0]===ch) idx=i; }
+  var other=L[(idx+1)%L.length][0];
+  var behind=piece(13,'glow2','gglow','<ellipse cx="130" cy="150" rx="118" ry="112" fill="none" stroke="#F2C94C" stroke-width="10" opacity=".7"/>');
+  var front=piece(11,'feet','fx-feet',svgSpark(84,252,6,'#FFE9A8',0.1)+svgSpark(110,258,4,'#fff',0.5)+svgSpark(150,258,4,'#fff',0.8)+svgSpark(176,252,6,'#FFE9A8',1.1))
+   +piece(12,'buddy1','fx-buddy',mini(ch,206))
+   +piece(14,'balloon','fx-balloon','<path d="M66 204 Q46 130 34 76" stroke="#fff" stroke-width="2" fill="none"/>'+svgStar(34,58,20,9,'#FFD23F')+svgSpark(26,50,3,'#fff',0.4))
+   +piece(15,'orbit','aura',svgStar(130,-18,9,4,'#FFE24A')+svgStar(273,125,9,4,'#FF8FC8')+svgStar(130,268,9,4,'#7CD4FF')+svgStar(-13,125,9,4,'#7CF5C8'))
+   +piece(16,'hearts','fx-hearts',[[62,150,0],[200,140,1.2],[90,90,2.1]].map(function(h){ return '<path class="heart" style="--dl:-'+h[2]+'s" d="M'+h[0]+' '+h[1]+' c-6 -8 -18 -2 -12 8 l12 12 l12 -12 c6 -10 -6 -16 -12 -8 Z" fill="#FF5C8A"/>'; }).join(''))
+   +piece(17,'buddy2','fx-buddy',mini(other,-18))
+   +piece(18,'glitter','fx-glitter',[[100,196],[160,206],[124,230],[146,178],[88,222],[172,232]].map(function(q,j){ return svgSpark(q[0],q[1],4,'#fff',j*0.3); }).join(''))
+   +piece(19,'medal','fx-medal','<path d="M120 198 L114 222 M140 198 L146 222" stroke="#3A7BD5" stroke-width="7"/>'+svgDot(130,232,13,'#F2C94C','#D9A72E')+svgStar(130,232,8,3.5,'#FFF6DC'))
+   +piece(20,'trophy','fx-trophy','<circle cx="232" cy="46" r="34" fill="#FFF3A0" opacity=".45"/><path d="M216 26 L248 26 L246 52 Q232 66 218 52 Z" fill="#F2C94C" stroke="#D9A72E" stroke-width="2"/><path d="M216 32 Q204 34 208 44 Q212 50 219 49 M248 32 Q260 34 256 44 Q252 50 245 49" stroke="#D9A72E" stroke-width="3" fill="none"/><rect x="228" y="60" width="8" height="10" fill="#D9A72E"/><rect x="220" y="70" width="24" height="7" rx="2" fill="#8A5E33"/>'+svgStar(232,40,6,2.6,'#fff'));
+  return {behind:behind, front:front};
+}
 function setMood(m){ var a=document.querySelectorAll('.axo-box .axo'); for(var i=0;i<a.length;i++) a[i].setAttribute('data-mood',m); }
 function replay(id,cls){ var b=$(id); b.classList.remove('jump','shake'); void b.offsetWidth; b.classList.add(cls); }
 function jump(id){ replay(id,'jump'); }
@@ -1292,12 +1366,12 @@ function flyPearls(n,fromEl){
 }
 function countTo(el,from,to,dur){ var t0=performance.now(); function f(t){ var k=Math.min(1,(t-t0)/dur); el.textContent=Math.round(from+(to-from)*(1-Math.pow(1-k,3))); if(k<1) requestAnimationFrame(f); } requestAnimationFrame(f);
   var st=$('pearlStat'); st.classList.remove('pulse'); void st.offsetWidth; st.classList.add('pulse'); }
-function addPearls(n,fromEl){
+function addPearls(n,fromEl,lvBefore){
   var before=SW().pearls; SW().pearls+=n; if(G.stats) G.stats.pearls+=n;
   flyPearls(Math.min(6,Math.ceil(n/3)),fromEl); floatText('+'+n,fromEl);
   var who=P.current, after=SW().pearls, lv0=levels(), where=W().where;
   setTimeout(function(){ if(P.current!==who) return; countTo($('pearlCount'),before,after,600); renderLevelBar(false); },500);
-  var L0=levelFor(before), L1=levelFor(SW().pearls);
+  var L0=(lvBefore!=null?lvBefore:levelFor(before)), L1=levelFor(SW().pearls);
   if(L1>L0){ SW().wearLevel=null;
     setTimeout(function(){ if(P.current!==who||levels()!==lv0) return; setOutfit(); renderScene(); renderLevelBar(true); SFX.unlock(); sceneParty(5000); bigConfetti();
       for(var l=L0+1;l<=L1;l++){ var L=lv0[l-1]; Banners.push({kind:'unlock',title:'Level '+l+'!',sub:'New: '+L.o+', plus '+L.l+' '+where,svg:axoSVG({mood:'happy'}),level:l,ms:3200}); }
@@ -1355,16 +1429,16 @@ function check(){ clearTimeout(G.ttimer);
   if(ans.toLowerCase()===G.cur.w.toLowerCase()) onCorrect(); else onWrong(ans);
 }
 function onCorrect(){ clearTimeout(G.vtimer);
-  var w=G.cur, st=wstat(w.w), item=G.queue[G.idx], gain=0, ms=null;
+  var w=G.cur, st=wstat(w.w), item=G.queue[G.idx], gain=0, ms=null, lv0=levelFor(SW().pearls), was=isMastered(st);
   if(G.phase==='answer'){
-    gain=item.retry?3:(G.hinted?5:10); if(!item.retry) G.streak++; st.streak++; st.right++; S.totalCorrect++;
+    gain=item.retry?3:(G.hinted?5:10); if(!item.retry) G.streak++; if(!G.hinted) st.streak++; if(st.streak>=3) st.mastered=true; st.right++; S.totalCorrect++;
     if(G.streak>S.bestStreak) S.bestStreak=G.streak; if(G.streak>G.stats.best) G.stats.best=G.streak;
     item.status=item.retry?'retry':'first'; if(item.retry) G.stats.fixed++; else G.stats.first++;
     ms=item.retry?null:W().milestones[G.streak];
     if(ms){ gain+=ms.b; SFX.fanfare(); bigConfetti(); sceneParty(); Banners.push({title:ms.t,sub:G.streak+' in a row! +'+ms.b+' bonus'}); }
     else { SFX.correct(); confettiBurst(1); sceneFlash(); bubbleBurst(); }
     bubble('playBubble',pick(W().praise));
-    if(st.streak===3) setTimeout(function(){ toast('Mastered: '+w.w+'!'); },900);
+    if(!was&&isMastered(st)){ setTimeout(function(){ toast('Mastered: '+w.w+'!'); },900); var AL=activeWords(); if(countMastered(AL)===AL.length) Banners.push({title:'All '+AL.length+' words mastered!',sub:'You are a Spelling Master!',ms:3200}); }
   } else {
     gain=2; SFX.correct(); confettiBurst(0.5); sceneFlash(); bubble('playBubble','Locked in! Nice fix.');
   }
@@ -1372,7 +1446,7 @@ function onCorrect(){ clearTimeout(G.vtimer);
   $('spellInput').readOnly=true; $('spellInput').className='spell-input ok';
   $('lockinBox').hidden=true; $('hintStrip').hidden=true; $('infoBox').hidden=true;
   renderDots(); showResult(w.w); revealFeedback();
-  addPearls(gain,$('checkBtn'));
+  addPearls(gain,$('checkBtn'),lv0);
   setMood('happy'); jump('axoPlay'); updateStreak(); save();
   G.timer=setTimeout(function(){ G.idx++; nextWord(); }, ms?2800:1900);
 }
@@ -1487,7 +1561,7 @@ function renderHome(){
   $('axoNameHome').textContent=mascotName(); $('playerName').textContent=S.kid||'Player';
   var greet=S.kid?('Hi '+S.kid+'! Ready to spell?'):'Hi! Ready to spell?';
   $('homeBubble').textContent=pick([greet,greet].concat(W().lines));
-  var list=activeWords(), total=list.length, m=list.filter(function(w){return wstat(w.w).streak>=3;}).length;
+  var list=activeWords(), total=list.length, m=countMastered(list);
   $('masteredCount').textContent=m; $('totalCount').textContent=total;
   setTimeout(function(){ $('masteredBar').style.width=(100*m/total)+'%'; },60);
   $('roundLen').value=String(S.roundLen);
@@ -1509,14 +1583,14 @@ function renderLevels(){
   var L0=levels(), un=levelFor(SW().pearls), wear=wearLevel(), html='';
   for(var l=0;l<=un;l++){ var L=l?L0[l-1]:null, sub=(l===wear)?'Wearing it':(L?('+ '+esc(L.l)):'Tap to wear');
     html+='<button type="button" class="level-card'+(l===wear?' wear':'')+'" data-lv="'+l+'">'+axoSVG()+'<span class="lc-lv">'+(l?'Level '+l:'Start')+'</span><span class="lc-name">'+(L?esc(L.o):'Just me')+'</span><span class="lc-sub">'+sub+'</span></button>'; }
-  if(un<L0.length){ html+='<button type="button" class="level-card locked mystery" disabled><span class="lc-q" aria-hidden="true">?</span><span class="lc-lv">Level '+(un+1)+'</span><span class="lc-name">Surprise!</span><span class="lc-sub">'+L0[un].p+' '+W().cur+'</span></button>'; }
+  if(un<L0.length){ html+='<button type="button" class="level-card locked mystery" disabled><span class="lc-q" aria-hidden="true">?</span><span class="lc-lv">Level '+(un+1)+'</span><span class="lc-name">Surprise!</span><span class="lc-sub">'+L0[un].p+' '+W().cur+(L0[un].m?' + '+L0[un].m+' mastered':'')+'</span></button>'; }
   var g=$('levelGrid'); g.innerHTML=html;
   var cards=g.querySelectorAll('.level-card[data-lv]'); for(var i=0;i<cards.length;i++){ var sv=cards[i].querySelector('.axo'); if(sv) applyOutfit(sv,parseInt(cards[i].getAttribute('data-lv'),10)); }
 }
 function renderLevelBar(pulse){
   var L0=levels(), p=SW().pearls, lv=levelFor(p), next=L0[lv], prev=lv?L0[lv-1].p:0;
   $('lbLevel').textContent='Level '+lv;
-  if(next){ var k=(p-prev)/(next.p-prev); $('lbFill').style.width=Math.max(0,Math.min(100,k*100))+'%'; $('lbNext').textContent='Level '+(lv+1)+' at '+next.p+' '+W().cur; }
+  if(next){ var k=(p-prev)/(next.p-prev); $('lbFill').style.width=Math.max(0,Math.min(100,k*100))+'%'; $('lbNext').textContent='Level '+(lv+1)+' at '+next.p+' '+W().cur+(next.m?' + '+next.m+' words mastered':''); }
   else { $('lbFill').style.width='100%'; $('lbNext').textContent='Top level reached!'; }
   if(pulse){ var b=$('levelbar'); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse'); }
 }
@@ -1524,18 +1598,18 @@ var wordFilter='all', wordSel=null;
 function renderWords(){
   if(wordFilter==='crossed'&&S.grade!=='3') wordFilter='all';
   var list=activeWords().filter(function(w){ var st=wstat(w.w);
-    if(wordFilter==='mastered') return st.streak>=3;
-    if(wordFilter==='practice') return st.streak<3&&(st.wrong>0||st.seen>0);
+    if(wordFilter==='mastered') return isMastered(st);
+    if(wordFilter==='practice') return !isMastered(st)&&(st.wrong>0||st.seen>0);
     if(wordFilter==='crossed') return !!w.c;
     return true; });
   $('wordList').innerHTML=list.length?list.map(function(w){ var st=wstat(w.w);
-    return '<button type="button" class="word-row'+(wordSel===w.w?' on':'')+'" data-w="'+w.w+'"><span class="wr-word">'+esc(w.w)+'</span><span class="wr-stars">'+stars(Math.min(3,st.streak))+'</span></button>'; }).join('')
+    return '<button type="button" class="word-row'+(wordSel===w.w?' on':'')+'" data-w="'+w.w+'"><span class="wr-word">'+esc(w.w)+'</span><span class="wr-stars">'+stars(isMastered(st)?3:Math.min(3,st.streak))+'</span></button>'; }).join('')
     :'<p class="hint-text">Nothing here yet. Play a round first!</p>';
   var chips=document.querySelectorAll('#wordChips .chip'); for(var i=0;i<chips.length;i++) chips[i].classList.toggle('on',chips[i].getAttribute('data-f')===wordFilter);
 }
 function showWordDetail(w){
   wordSel=w.w; var st=wstat(w.w);
-  $('wordDetail').innerHTML='<div class="wd-word">'+esc(w.w)+'</div><div class="star-row">'+stars(Math.min(3,st.streak))+'</div>'
+  $('wordDetail').innerHTML='<div class="wd-word">'+esc(w.w)+'</div><div class="star-row">'+stars(isMastered(st)?3:Math.min(3,st.streak))+'</div>'
     +(w.c?'<p class="hint-text">Crossed off on the paper list.</p>':'')
     +'<p><span class="lbl">Meaning</span>'+esc(w.d)+'</p><p><span class="lbl">Sentence</span>'+esc(w.s)+'</p>'
     +'<p><span class="lbl">Your record</span>'+st.right+' right, '+st.wrong+' missed</p>'
