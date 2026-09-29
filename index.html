@@ -949,9 +949,9 @@ var S=defaults();
 var ONLINE={}, LIVE={}, LOADED=false;
 function profileById(id){ for(var i=0;i<PLAYERS.length;i++){ if(PLAYERS[i].id===id) return PLAYERS[i]; } return null; }
 function snap(o){ return JSON.parse(JSON.stringify(o)); }
-/* key-order-proof comparison */
+/* key-order-proof comparison; _sid only labels a save */
 function canon(o){ if(Array.isArray(o)) return '['+o.map(canon).join(',')+']';
-  if(o&&typeof o==='object') return '{'+Object.keys(o).filter(function(k){ return o[k]!==undefined; }).sort().map(function(k){ return JSON.stringify(k)+':'+canon(o[k]); }).join(',')+'}';
+  if(o&&typeof o==='object') return '{'+Object.keys(o).filter(function(k){ return o[k]!==undefined&&k!=='_sid'; }).sort().map(function(k){ return JSON.stringify(k)+':'+canon(o[k]); }).join(',')+'}';
   return JSON.stringify(o); }
 /* one-time repair: raises a save to a known-good record, never lowers it */
 function applyRestore(id,st){ var R=(typeof RESTORE!=='undefined')&&RESTORE[id]; if(!R||st.restoredId===R.id) return st;
@@ -996,9 +996,9 @@ function wstat(w){if(!S.words[w])S.words[w]={streak:0,right:0,wrong:0,seen:0};re
 /* the save service. Every change is sent within a moment; a save only lands if it names the version it started
    from, and when another device saved first the two copies are merged and sent again. */
 var Net=(function(){
-  var status='', timers={}, sending={}, conflicts={}, imported={}, fails=0, retryT=null;
+  var status='', timers={}, sending={}, conflicts={}, imported={}, unconfirmed={}, fails=0, retryT=null;
   function call(method,path,body){ if(!CLOUD||!window.fetch) return Promise.reject(new Error('no save service'));
-    var o={method:method,cache:'no-store'}; if(body){ o.body=JSON.stringify(body); o.headers={'Content-Type':'text/plain'}; }
+    var o={method:method,cache:'no-store'}; if(body){ o.body=JSON.stringify(body); o.headers={'Content-Type':'text/plain'}; o.keepalive=o.body.length<60000; }
     return fetch(CLOUD+path,o).then(function(r){ if(r.status!==200) throw new Error('HTTP '+r.status);
       return r.json().then(function(j){ return {conflict:!!j.conflict,body:j}; }); }); }
   function show(s){ status=s; renderSync(s); }
@@ -1012,11 +1012,17 @@ var Net=(function(){
     if(mine&&remote){ var base=(o&&o.state)||{epoch:remote.epoch||0,worlds:{},words:{},totalCorrect:0};
       var merged=mergeState(mine,Object.assign(defaults(),remote),base); LIVE[id]=merged; if(P.current===id){ S=merged; refreshView(); } }
     ONLINE[id]={rev:rev,state:remote}; }
+  /* each save carries the copy it started from (base), so the service can merge it with saves from other devices
+     in one trip, even while this page is closing. maybe: an earlier save whose reply never came back */
   function push(id){ clearTimeout(timers[id]); timers[id]=null; if(sending[id]||!LIVE[id]) return;
-    var st=snap(LIVE[id]), o=ONLINE[id]||{rev:0,state:null}; sending[id]=true; show('saving');
-    call('POST','/saves/'+encodeURIComponent(id),{rev:o.rev,state:st}).then(function(r){ sending[id]=false; fails=0;
-      if(!r.conflict||(r.body.state&&canon(r.body.state)===canon(st))){ conflicts[id]=0; ONLINE[id]={rev:r.body.rev,state:st}; doneImport(id); }
-      else { absorb(id,r.body.rev,r.body.state); if((conflicts[id]=(conflicts[id]||0)+1)>5){ conflicts[id]=0; failed(); return; } }
+    var st=snap(LIVE[id]), o=ONLINE[id]||{rev:0,state:null}; st._sid=Math.random().toString(36).slice(2,12);
+    var body={rev:o.rev,state:st,base:o.state}; if(unconfirmed[id]) body.maybe=unconfirmed[id]; unconfirmed[id]=st;
+    sending[id]=true; show('saving');
+    call('POST','/saves/'+encodeURIComponent(id),body).then(function(r){ sending[id]=false; fails=0; delete unconfirmed[id];
+      if(r.conflict){ absorb(id,r.body.rev,r.body.state); if((conflicts[id]=(conflicts[id]||0)+1)>5){ conflicts[id]=0; failed(); return; } }
+      else { conflicts[id]=0; var saved=r.body.state||st; ONLINE[id]={rev:r.body.rev,state:saved};
+        if(r.body.state){ LIVE[id]=mergeState(LIVE[id],Object.assign(defaults(),saved),st); if(P.current===id){ S=LIVE[id]; refreshView(); } }
+        doneImport(id); }
       if(dirty(id)) push(id); else settle();
     },function(){ sending[id]=false; failed(); }); }
   function schedule(id){ if(!id) return; clearTimeout(timers[id]); timers[id]=setTimeout(function(){ push(id); },400); if(status!=='offline') show('saving'); }
@@ -1038,7 +1044,10 @@ var Net=(function(){
     ['spelling-worlds-current','spelling-worlds-device'].concat(PLAYERS.map(function(p){ return 'spelling-worlds-sync-'+p.id; })).forEach(function(k){ try{ ls.removeItem(k); }catch(e){} }); }
   function doneImport(id){ if(imported[id]){ try{ localStorage.removeItem(imported[id]); }catch(e){} delete imported[id]; } }
   window.addEventListener('online',retry);
-  document.addEventListener('visibilitychange',function(){ if(document.hidden){ for(var id in timers){ if(timers[id]) push(id); } } else refresh(); });
+  /* a page that is closing sends what is waiting right away (keepalive lets the request finish after the page is gone) */
+  function flush(){ for(var id in timers){ if(timers[id]) push(id); } }
+  document.addEventListener('visibilitychange',function(){ if(document.hidden) flush(); else refresh(); });
+  window.addEventListener('pagehide',flush);
   return {schedule:schedule, refresh:refresh, retry:retry, idle:function(){ for(var id in LIVE){ if(sending[id]||timers[id]) return false; } return true; }, status:function(){ return status; }};
 })();
 var SYNC_TEXT={loading:'Loading saves...',saving:'Saving...',saved:'Saved online',offline:"Can't reach the save server. Progress is not saved until it reconnects."};

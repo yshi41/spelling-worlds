@@ -105,12 +105,12 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
   await pageB.evaluate(() => { __spelling.S.worlds.ocean.pearls += 10; __spelling.save(); });
   await page.reload({ waitUntil: 'load' }); await sleep(350); await click('.profile-card[data-id="cora"]'); await sleep(450);
   ok(await pearls() === 610, 'both tabs\' bubbles kept (610)', 'got ' + await pearls());
-  await pageB.close();
+  await pageB.close(); await sleep(600);
 
   console.log('D. Reset keeps the character and the world');
   await click('.char-chip[data-char="octopus"]'); await sleep(150);
   await click('#resetBtn'); await sleep(150); await click('#resetYes'); await sleep(400);
-  ok(await pearls() === 0 && await text('#lbLevel') === 'Level 0' && await attr('.char-chip.on', 'data-char') === 'octopus' && await world() === 'ocean', 'reset: 0 bubbles, level 0, still an octopus in the ocean');
+  ok(await pearls() === 0 && await text('#lbLevel') === 'Level 0' && await attr('.char-chip.on', 'data-char') === 'octopus' && await world() === 'ocean', 'reset: 0 bubbles, level 0, still an octopus in the ocean', [await pearls(), await text('#lbLevel'), await attr('.char-chip.on', 'data-char'), await world()].join(' / '));
   await click('.char-chip[data-char="jellyfish"]'); await sleep(150);
 
   console.log('E. Viewport sweep');

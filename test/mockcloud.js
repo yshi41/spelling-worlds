@@ -4,15 +4,9 @@ const MOCK = 'https://cloud.test';
 const REAL = /spelling-worlds-saves\.[a-z0-9-]+\.workers\.dev/;
 const KIDS = ['charlie', 'riley', 'vera', 'cora'];
 const clone = o => JSON.parse(JSON.stringify(o));
-function lowersProgress(next, prev) {
-  if (!prev) return false;
-  const ne = next.epoch || 0, pe = prev.epoch || 0;
-  if (ne !== pe) return ne < pe;
-  const pw = prev.worlds || {}, nw = next.worlds || {};
-  return Object.keys(pw).some(k => ((nw[k] && nw[k].pearls) || 0) < ((pw[k] && pw[k].pearls) || 0));
-}
+const { mergeState, lowersProgress } = require('../worker/src/logic.mjs');
 function create() {
-  const store = {}, stats = { gets: 0, posts: 0, conflicts: 0, realHits: 0 }, ctl = { down: false, dropNextReply: false };
+  const store = {}, history = [], stats = { gets: 0, posts: 0, conflicts: 0, merges: 0, realHits: 0 }, ctl = { down: false, dropNextReply: false };
   const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
   const json = (req, body, status = 200) => req.respond({ status, headers: cors, contentType: 'application/json', body: JSON.stringify(body) });
   function handle(req) {
@@ -26,11 +20,20 @@ function create() {
     const id = decodeURIComponent(path.split('/')[2] || ''), cur = store[id] || { rev: 0, state: null };
     if (req.method() === 'GET') { stats.gets++; return json(req, clone(cur)); }
     stats.posts++;
-    const body = JSON.parse(req.postData() || '{}');
-    if (cur.rev !== body.rev || lowersProgress(body.state, cur.state)) { stats.conflicts++; return json(req, { conflict: true, ...clone(cur) }); }
-    store[id] = { rev: cur.rev + 1, state: body.state };
+    const body = JSON.parse(req.postData() || '{}'), isObj = o => o && typeof o === 'object' && !Array.isArray(o);
+    let state = body.state, merged = false;
+    const conflict = () => { stats.conflicts++; return json(req, { conflict: true, ...clone(cur) }); };
+    if (cur.rev !== body.rev) {
+      if (!cur.state) return conflict();
+      let from = isObj(body.base) ? body.base : null;
+      if (isObj(body.maybe) && body.maybe._sid && history.some(h => h.id === id && h.rev > body.rev && h.sid === body.maybe._sid)) from = body.maybe;
+      if (!from) return conflict();
+      state = mergeState(state, clone(cur.state), from); merged = true; stats.merges++;
+    }
+    if (lowersProgress(state, cur.state)) return conflict();
+    store[id] = { rev: cur.rev + 1, state: clone(state) }; history.push({ id, rev: cur.rev + 1, sid: state._sid });
     if (ctl.dropNextReply) { ctl.dropNextReply = false; return req.abort('connectionreset'); }
-    return json(req, { rev: cur.rev + 1 });
+    return json(req, merged ? { rev: cur.rev + 1, state, merged: true } : { rev: cur.rev + 1 });
   }
   async function attach(page) {
     await page.evaluateOnNewDocument(u => { window.SPELLING_CLOUD = u; }, MOCK);

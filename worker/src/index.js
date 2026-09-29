@@ -1,6 +1,8 @@
 /* Spelling Worlds save service. One row per player; a save only lands when it names the
    revision it was based on (compare-and-swap), progress can only drop through a Reset,
    and every accepted save is also kept in a history table for recovery. */
+import { mergeState, lowersProgress } from './logic.mjs';
+
 const KIDS = ['charlie', 'riley', 'vera', 'cora'];
 const ID_RE = /^(charlie|riley|vera|cora|qa-[a-z0-9-]{1,32})$/;
 const MAX_BYTES = 200000;
@@ -14,15 +16,6 @@ function json(body, status = 200) {
 async function current(db, id) {
   const r = await db.prepare('SELECT rev, state FROM saves WHERE player = ?').bind(id).first();
   return r ? { rev: r.rev, state: JSON.parse(r.state) } : { rev: 0, state: null };
-}
-
-/* rewards may only go down through a Reset, which bumps the epoch */
-function lowersProgress(next, prev) {
-  if (!prev) return false;
-  const ne = next.epoch || 0, pe = prev.epoch || 0;
-  if (ne !== pe) return ne < pe;
-  const pw = prev.worlds || {}, nw = next.worlds || {};
-  return Object.keys(pw).some(k => ((nw[k] && nw[k].pearls) || 0) < ((pw[k] && pw[k].pearls) || 0));
 }
 
 export default {
@@ -45,21 +38,35 @@ export default {
     if (text.length > MAX_BYTES) return json({ error: 'too_big' }, 413);
     let body;
     try { body = JSON.parse(text); } catch (e) { return json({ error: 'bad_json' }, 400); }
-    const state = body && body.state, base = body && Number.isInteger(body.rev) ? body.rev : -1;
-    if (!state || typeof state !== 'object' || Array.isArray(state) || base < 0) return json({ error: 'bad_request' }, 400);
+    let state = body && body.state;
+    const base = body && Number.isInteger(body.rev) ? body.rev : -1, isObj = o => o && typeof o === 'object' && !Array.isArray(o);
+    if (!isObj(state) || base < 0) return json({ error: 'bad_request' }, 400);
 
     const cur = await current(db, id);
+    let merged = false;
+    if (cur.rev !== base && cur.state) {
+      /* another device saved first. Merge here, so a page that is closing still gets its save in. If the page's
+         previous save landed but its reply was lost (maybe), that save is the true starting point. */
+      let from = isObj(body.base) ? body.base : null;
+      if (isObj(body.maybe) && body.maybe._sid) {
+        const hit = await db.prepare("SELECT 1 FROM history WHERE player = ? AND rev > ? AND json_extract(state, '$._sid') = ?").bind(id, base, body.maybe._sid).first();
+        if (hit) from = body.maybe;
+      }
+      if (!from) return json({ conflict: true, ...cur });
+      state = mergeState(state, cur.state, from); merged = true;
+    } else if (cur.rev !== base) return json({ conflict: true, ...cur });
     /* conflicts answer 200 with conflict:true, so browsers do not log them as failed requests */
-    if (cur.rev !== base || lowersProgress(state, cur.state)) return json({ conflict: true, ...cur });
+    if (lowersProgress(state, cur.state)) return json({ conflict: true, ...cur });
     const now = Date.now(), s = JSON.stringify(state);
-    const res = base === 0
+    const res = cur.rev === 0
       ? await db.prepare('INSERT INTO saves (player, rev, state, updated) VALUES (?, 1, ?, ?) ON CONFLICT(player) DO NOTHING').bind(id, s, now).run()
-      : await db.prepare('UPDATE saves SET rev = rev + 1, state = ?, updated = ? WHERE player = ? AND rev = ?').bind(s, now, id, base).run();
+      : await db.prepare('UPDATE saves SET rev = rev + 1, state = ?, updated = ? WHERE player = ? AND rev = ?').bind(s, now, id, cur.rev).run();
     if (!res.meta.changes) return json({ conflict: true, ...(await current(db, id)) });
 
-    const writes = [db.prepare('INSERT INTO history (player, rev, state, at) VALUES (?, ?, ?, ?)').bind(id, base + 1, s, now)];
-    if ((base + 1) % 25 === 0) writes.push(db.prepare('DELETE FROM history WHERE player = ? AND id NOT IN (SELECT id FROM history WHERE player = ? ORDER BY id DESC LIMIT ?)').bind(id, id, KEEP_HISTORY));
+    const rev = cur.rev + 1;
+    const writes = [db.prepare('INSERT INTO history (player, rev, state, at) VALUES (?, ?, ?, ?)').bind(id, rev, s, now)];
+    if (rev % 25 === 0) writes.push(db.prepare('DELETE FROM history WHERE player = ? AND id NOT IN (SELECT id FROM history WHERE player = ? ORDER BY id DESC LIMIT ?)').bind(id, id, KEEP_HISTORY));
     await db.batch(writes);
-    return json({ rev: base + 1 });
+    return json(merged ? { rev, state, merged: true } : { rev });
   }
 };
