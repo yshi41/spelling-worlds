@@ -162,9 +162,9 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
 
   console.log('G. Text contrast, ocean vs rainforest, light and dark');
   for (const scheme of ['light', 'dark']) {
-    await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: scheme }]);
     for (const [w, h] of [[1280, 800], [390, 844]]) {
       await page.setViewport({ width: w, height: h, isMobile: w < 800, hasTouch: w < 800 });
+      await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: scheme }]);
       const res = {};
       for (const who of ['cora', 'vera']) {
         await page.goto(URL, { waitUntil: 'load' }); await sleep(300); await click('.profile-card[data-id="' + who + '"]'); await sleep(450);
@@ -173,7 +173,7 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
         const play = await page.evaluate(CONTRAST, TEXT_SELS);
         res[who] = home.concat(play.filter(p => !home.some(q => q.sel === p.sel)));
         await click('#quitBtn'); await sleep(200);
-        if (who === 'cora' && w === 390) await page.screenshot({ path: 'qa-390-cora-' + scheme + '.png' });
+        if (who === 'cora' && w === 390) { const dm = await page.evaluate(() => matchMedia('(prefers-color-scheme: dark)').matches); ok(dm === (scheme === 'dark'), scheme + ' mode really emulated'); await page.screenshot({ path: 'qa-390-cora-' + scheme + '.png' }); }
       }
       const low = res.cora.filter(r => r.ratio !== null && r.ratio < (r.large ? 3 : 4.5));
       const lowV = res.vera.filter(r => r.ratio !== null && r.ratio < (r.large ? 3 : 4.5));

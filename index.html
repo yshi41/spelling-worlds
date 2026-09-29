@@ -230,9 +230,9 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
   --display:'Fredoka';
   --bg:#E3E7FF; --bg-deep:#B9C3F5; --surface:#FFFFFF; --surface-2:#F1F3FF;
   --ink:#232B5C; --ink-soft:#5B6396; --line:#CBD2F2;
-  --accent:#7C5CFF; --mascot:#C9A7FF;
-  --good:#1FB2A6; --good-soft:#D3F3F0; --bad:#F06292; --bad-soft:#FFDCE8;
-  --sky:#4C7BFF; --sky-soft:#DCE6FF;
+  --accent:#6A48F5; --mascot:#C9A7FF;
+  --good:#0F8378; --good-soft:#D3F3F0; --bad:#F06292; --bad-soft:#FFDCE8;
+  --sky:#3B66E6; --sky-soft:#DCE6FF;
   --shadow:0 10px 30px rgba(35,43,92,.16); --press:rgba(35,43,92,.24);
 }
 @media (prefers-color-scheme: dark){
@@ -299,6 +299,9 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 .mode-btn[data-mode="spell"]{background:var(--accent)}
 .mode-btn[data-mode="tiles"]{background:var(--sky)}
 .mode-btn[data-mode="list"]{background:var(--good)}
+/* in dark mode the mint and blue buttons are bright, so their text goes dark to stay readable */
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) :is(.btn-good,.btn-sky,.mode-btn[data-mode="tiles"],.mode-btn[data-mode="list"]){color:#101828} }
+:root[data-theme="dark"] :is(.btn-good,.btn-sky,.mode-btn[data-mode="tiles"],.mode-btn[data-mode="list"]){color:#101828}
 .progress-line{display:flex;align-items:center;gap:12px;margin-top:16px;font-weight:700;color:var(--ink-soft);flex-wrap:wrap}
 .bar{flex:1;height:14px;border-radius:999px;background:var(--surface-2);border:2px solid var(--line);overflow:hidden;min-width:120px}
 .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--good),var(--sky));width:0;transition:width .8s cubic-bezier(.2,.8,.2,1)}
