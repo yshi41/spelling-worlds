@@ -16,6 +16,8 @@ A spelling bee practice game for four players: Charlie, Riley, Vera, and Cora. E
 
 Each player's progress is saved in the browser on the device where they play. It does not sync between devices or browsers.
 
+On a phone, use the browser's **Add to Home Screen**: the game gets its own icon and opens full-screen like an app (`manifest.webmanifest`, `icon.svg` and the PNG icons rendered from it).
+
 ## Word lists
 
 The 3rd and 4th grade lists are the Scripps School Spelling Bee study words for those grades, with kid-friendly meanings and example sentences added.
