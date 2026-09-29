@@ -14,7 +14,11 @@ A spelling bee practice game for four players: Charlie, Riley, Vera, and Cora. E
 
 ## Saving
 
-Each player's progress is saved in the browser on the device where they play. It does not sync between devices or browsers.
+Progress saves online, so every device and browser shows the same levels and rewards. The home screen says **Saved online** when the latest progress has reached the save service. With no connection it keeps playing, saves on the device, and sends everything up once it reconnects.
+
+The save service is a small Cloudflare Worker in `worker/` (`https://spelling-worlds-saves.yshi41.workers.dev`) backed by a D1 database with one row per player, plus a history of every save for recovery. A save only lands if it names the version it started from; when another device saved first, the game merges the two copies and sends again. Rewards are tallied per device inside each save, so merging never counts anything twice, and the service refuses any save that lowers rewards unless it comes from **Reset this player's progress**.
+
+To change the service: `cd worker`, edit `src/index.js`, then `npx wrangler deploy`. `schema.sql` creates the tables (`npx wrangler d1 execute spelling-worlds-saves --remote --file=schema.sql`).
 
 On a phone, use the browser's **Add to Home Screen**: the game gets its own icon and opens full-screen like an app (`manifest.webmanifest`, `icon.svg` and the PNG icons rendered from it).
 
@@ -24,7 +28,7 @@ The 3rd and 4th grade lists are the Scripps School Spelling Bee study words for 
 
 ## Testing
 
-`test/test.js` drives the game in headless Chrome and checks the player screen, hover previews, both worlds, spelling and tile rounds, misses and lock-in, hints, level-ups, the word list, persistence across player switches and reloads, reset, and phone-width layout.
+`test/test.js` drives the game in headless Chrome against an in-memory stand-in for the save service (`test/mockcloud.js`), so tests never touch the real saves. It checks online saving across two devices, offline play, lost replies, and resets, plus the player screen, hover previews, both worlds, spelling and tile rounds, misses and lock-in, hints, level-ups, the word list, persistence across player switches and reloads, reset, and phone-width layout.
 
 ```
 cd test
@@ -34,4 +38,4 @@ npm test
 
 It expects Chrome at `C:/Program Files/Google/Chrome/Application/chrome.exe`; edit the path at the top of the script if yours differs.
 
-`node qa.js` sweeps the published site instead: every ocean level and character, a two-tab save merge, reset, eight phone-to-desktop viewports with the play flows, the keyboard-open view, and text contrast in light and dark mode. Pass a file path to run it against a local copy.
+`node qa.js` sweeps the published site instead, also with the stand-in save service: every ocean level and character, a two-tab save merge, reset, eight phone-to-desktop viewports with the play flows, the keyboard-open view, and text contrast in light and dark mode. Pass a file path to run it against a local copy.

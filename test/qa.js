@@ -1,4 +1,4 @@
-/* Live-site QA sweep: the ocean world at every level and character, a two-tab
+/* Live-site QA sweep (saves go to an in-memory stand-in, never the kids' real online saves): the ocean world at every level and character, a two-tab
    save merge, reset, eight viewports with Cora's play flows, the keyboard-open
    view, and text contrast in light and dark mode.
      node qa.js                       (against the published site)
@@ -40,6 +40,7 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
 (async () => {
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--mute-audio', '--disable-speech-api', '--disable-gpu'] });
   const page = await browser.newPage();
+  const cloud = require('./mockcloud').create(); await cloud.attach(page);
   const errors = [], failedReq = [];
   page.on('pageerror', e => errors.push('pageerror: ' + e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
@@ -99,7 +100,7 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
   console.log('C. Two tabs never overwrite Cora');
   await page.evaluate(() => { __spelling.S.worlds.ocean.pearls = 500; __spelling.S.epoch = (__spelling.S.epoch || 0) + 1; __spelling.save(); });
   await goCora();
-  const pageB = await browser.newPage(); await pageB.goto(URL, { waitUntil: 'load' }); await sleep(350); await pageB.$eval('.profile-card[data-id="cora"]', el => el.click()); await sleep(450);
+  const pageB = await browser.newPage(); await cloud.attach(pageB); await pageB.goto(URL, { waitUntil: 'load' }); await sleep(350); await pageB.$eval('.profile-card[data-id="cora"]', el => el.click()); await sleep(450);
   await page.evaluate(() => { __spelling.S.worlds.ocean.pearls += 100; __spelling.save(); });
   await pageB.evaluate(() => { __spelling.S.worlds.ocean.pearls += 10; __spelling.save(); });
   await page.reload({ waitUntil: 'load' }); await sleep(350); await click('.profile-card[data-id="cora"]'); await sleep(450);

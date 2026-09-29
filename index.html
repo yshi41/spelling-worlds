@@ -510,6 +510,9 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
 .profile-card .pc-name{font-size:1.5rem}
 .profile-card .pc-sub{font-size:.85rem}
 .profiles-card{text-align:center;max-width:560px;margin:0 auto}
+.sync-note{margin:8px 0 0;font-size:.82rem;font-weight:700;color:var(--ink-soft)}
+.player-line .sync-note{margin:0 0 0 auto}
+.sync-note.off{color:var(--ink)}
 
 /* phones: the app follows the visible area when the keyboard is open, and the play screen gets compact */
 #app{height:var(--vvh,100%)}
@@ -614,6 +617,7 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
     <div class="card profiles-card">
       <h1 class="title">Who's playing?</h1>
       <p class="sub">Tap your name. Each of you keeps your own rewards, levels, and characters.</p>
+      <p class="sync-note" id="syncProfiles" aria-live="polite" hidden></p>
       <div class="profile-grid" id="profileGrid"></div>
     </div>
    </section>
@@ -626,7 +630,7 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
       </div>
       <div class="home-panel">
         <div class="card">
-          <div class="player-line"><span>Playing as <b id="playerName">Charlie</b></span><button class="btn btn-ghost btn-sm" id="switchBtn" type="button">Switch player</button></div>
+          <div class="player-line"><span>Playing as <b id="playerName">Charlie</b></span><button class="btn btn-ghost btn-sm" id="switchBtn" type="button">Switch player</button><span class="sync-note" id="syncHome" aria-live="polite" hidden></span></div>
           <h1 class="title" id="homeTitle">Spelling Lagoon</h1>
           <p class="sub" id="homeSub">The 50 third-grade bee words. Hear it, spell it, earn pearls, level up your character and the lagoon.</p>
           <div class="grade-row"><span class="glbl">Word list</span>
@@ -924,7 +928,7 @@ var PREVIEW=null;
 function world(){ return PREVIEW||S.theme||(S.grade==='4'?'candy':'lagoon'); }
 function W(){ return WORLDS[world()]; }
 function levels(){ return W().levels; }
-function SW(){ if(!S.worlds) S.worlds={}; var k=world(); if(!S.worlds[k]) S.worlds[k]={pearls:0,wearLevel:null}; return S.worlds[k]; }
+function SW(){ if(!S.worlds) S.worlds={}; var k=world(); if(!S.worlds[k]) S.worlds[k]=blankWorld(); return S.worlds[k]; }
 function confettiColors(){ return W().confetti; }
 function levelFor(p){ var L=levels(), m=masteredForLevels(), l=0; for(var i=0;i<L.length;i++){ if(p>=L[i].p&&m>=(L[i].m||0)) l=i+1; else break; } return l; }
 function wearLevel(){ var u=levelFor(SW().pearls), w=SW().wearLevel; return (w==null)?u:Math.min(w,u); }
@@ -932,11 +936,21 @@ function pick(a){return a[Math.floor(Math.random()*a.length)];}
 function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 
-/* players: Charlie and Riley each keep a separate save in this browser */
+/* players: each kid's save lives online (see Cloud below), with a copy in this browser for offline play */
 var PLAYERS=[{id:'charlie',name:'Charlie',grade:'4'},{id:'riley',name:'Riley',grade:'3'},{id:'vera',name:'Vera',grade:'4',theme:'canopy'},{id:'cora',name:'Cora',grade:'4',theme:'ocean'}];
 var PKEY='spelling-worlds-current', P={current:null};
+var CLOUD=(typeof window.SPELLING_CLOUD==='string')?window.SPELLING_CLOUD:'https://spelling-worlds-saves.yshi41.workers.dev';
+/* this browser's id: rewards are tallied per device so combining saves never counts anything twice */
+var DEV=(function(){ var k='spelling-worlds-device', v=null; try{ v=localStorage.getItem(k); if(!v){ v='d'+Math.random().toString(36).slice(2,10); localStorage.setItem(k,v); } }catch(e){} return v||'d0'; })();
 function pkey(id){ return 'spelling-worlds-'+id; }
-function defaults(){return {kid:'',charLagoon:'axolotl',charCandy:'bear',charCanopy:'sloth',charOcean:'jellyfish',grade:'3',sound:true,roundLen:'10',worlds:{lagoon:{pearls:0,wearLevel:null},candy:{pearls:0,wearLevel:null},canopy:{pearls:0,wearLevel:null},ocean:{pearls:0,wearLevel:null}},words:{},bestStreak:0,totalCorrect:0,epoch:0};}
+var WORLD_KEYS=['lagoon','candy','canopy','ocean'];
+function blankWorld(){ return {pearls:0,wearLevel:null,by:{}}; }
+function defaults(){return {kid:'',charLagoon:'axolotl',charCandy:'bear',charCanopy:'sloth',charOcean:'jellyfish',grade:'3',sound:true,roundLen:'10',worlds:{lagoon:blankWorld(),candy:blankWorld(),canopy:blankWorld(),ocean:blankWorld()},words:{},bestStreak:0,totalCorrect:0,epoch:0};}
+function sumBy(by){ var s=0; for(var k in by){ if(Object.prototype.hasOwnProperty.call(by,k)) s+=by[k]||0; } return s; }
+/* pearls is the total; by holds who earned it. Older saves become one 'base' share, and any new rewards count for this device */
+function normWorld(w){ if(!w) return w; if(!w.by||typeof w.by!=='object'){ w.by={}; if(w.pearls) w.by.base=w.pearls; }
+  var s=sumBy(w.by), p=w.pearls||0; if(p>s) w.by[DEV]=(w.by[DEV]||0)+(p-s); else if(p<s) w.by=p?{base:p}:{}; w.pearls=p; return w; }
+function normState(st){ if(st&&st.worlds) WORLD_KEYS.forEach(function(k){ if(st.worlds[k]) normWorld(st.worlds[k]); }); return st; }
 var S=defaults(), SYNC=null;
 function profileById(id){ for(var i=0;i<PLAYERS.length;i++){ if(PLAYERS[i].id===id) return PLAYERS[i]; } return null; }
 function loadProfiles(){ try{ P.current=localStorage.getItem(PKEY)||null; }catch(e){} }
@@ -945,11 +959,11 @@ function readState(id){ try{ var raw=localStorage.getItem(pkey(id)); if(raw) ret
 function snap(o){ return JSON.parse(JSON.stringify(o)); }
 /* one-time repair: raises a save to a known-good record, never lowers it */
 function applyRestore(id,st){ var R=(typeof RESTORE!=='undefined')&&RESTORE[id]; if(!R||st.restoredId===R.id) return st;
-  ['lagoon','candy'].forEach(function(k){ if(!st.worlds[k]) st.worlds[k]={pearls:0,wearLevel:null}; st.worlds[k].pearls=Math.max(st.worlds[k].pearls||0,R.worlds[k]||0); });
+  ['lagoon','candy'].forEach(function(k){ if(!st.worlds[k]) st.worlds[k]=blankWorld(); var w=st.worlds[k]; w.pearls=Math.max(w.pearls||0,R.worlds[k]||0); w.by={base:w.pearls}; });
   st.totalCorrect=Math.max(st.totalCorrect||0,R.totalCorrect||0); st.bestStreak=Math.max(st.bestStreak||0,R.bestStreak||0);
   Object.keys(R.words||{}).forEach(function(k){ var a=st.words[k], b=R.words[k]; if(!a||(b.seen||0)>(a.seen||0)) st.words[k]=b; });
   st.restoredId=R.id; return st; }
-function stateFor(id){ var st=readState(id)||defaults(); st=applyRestore(id,st); if(id==='riley'&&st.restoredId==='r20260927b'){ var L=st.worlds.lagoon; if(L&&L.pearls>=350) L.pearls=L.pearls-350+161; st.restoredId='u20260927'; } var p=profileById(id); if(p&&!st.gradePicked) st.grade=p.grade; if(p) st.theme=p.theme||null; return st; }
+function stateFor(id){ var st=readState(id)||defaults(); st=applyRestore(id,st); if(id==='riley'&&st.restoredId==='r20260927b'){ var L=st.worlds.lagoon; if(L&&L.pearls>=350){ L.pearls=L.pearls-350+161; L.by={base:L.pearls}; } st.restoredId='u20260927'; } var p=profileById(id); if(p&&!st.gradePicked) st.grade=p.grade; if(p) st.theme=p.theme||null; return normState(st); }
 function loadState(id){ S=stateFor(id); if(S.words.december&&!S.words.December){ S.words.December=S.words.december; delete S.words.december; } SYNC=snap(readState(id)||S); }
 /* several tabs can hold the same save: merge this tab's changes into what is stored instead of overwriting it */
 function mergeState(mem,disk,base){ if(!disk||!base) return mem;
@@ -957,8 +971,10 @@ function mergeState(mem,disk,base){ if(!disk||!base) return mem;
   if(me!==be) return mem; if(de!==be) return disk;
   var out=Object.assign({},disk);
   ['kid','grade','gradePicked','charLagoon','charCandy','charCanopy','charOcean','theme','sound','roundLen','restoredId'].forEach(function(k){ if(mem[k]!==undefined) out[k]=mem[k]; });
-  out.worlds={}; ['lagoon','candy','canopy','ocean'].forEach(function(k){ var m=(mem.worlds&&mem.worlds[k])||{pearls:0}, d=(disk.worlds&&disk.worlds[k])||{pearls:0}, b=(base.worlds&&base.worlds[k])||{pearls:0};
-    out.worlds[k]={pearls:Math.max(0,Math.max(d.pearls||0,b.pearls||0)+((m.pearls||0)-(b.pearls||0))), wearLevel:(m.wearLevel!==undefined?m.wearLevel:d.wearLevel)}; });
+  /* this device's share adds the tab's new rewards on top of the stored copy; other devices' shares only ever grow */
+  out.worlds={}; WORLD_KEYS.forEach(function(k){ var m=normWorld((mem.worlds&&mem.worlds[k])||blankWorld()), d=normWorld((disk.worlds&&disk.worlds[k])||blankWorld()), b=normWorld((base.worlds&&base.worlds[k])||blankWorld()), by={};
+    Object.keys(m.by).concat(Object.keys(d.by)).forEach(function(x){ by[x]=(x===DEV)?Math.max(0,Math.max(d.by[x]||0,b.by[x]||0)+((m.by[x]||0)-(b.by[x]||0))):Math.max(m.by[x]||0,d.by[x]||0); });
+    out.worlds[k]={pearls:sumBy(by), wearLevel:(m.wearLevel!==undefined?m.wearLevel:d.wearLevel), by:by}; });
   out.totalCorrect=Math.max(0,Math.max(disk.totalCorrect||0,base.totalCorrect||0)+((mem.totalCorrect||0)-(base.totalCorrect||0)));
   out.bestStreak=Math.max(mem.bestStreak||0,disk.bestStreak||0);
   out.words={}; var mw=mem.words||{}, dw=disk.words||{}, bw=base.words||{}, keys={};
@@ -968,9 +984,75 @@ function mergeState(mem,disk,base){ if(!disk||!base) return mem;
     else if(JSON.stringify(m)===JSON.stringify(b)) out.words[k]=d; else if(JSON.stringify(d)===JSON.stringify(b)) out.words[k]=m;
     else out.words[k]=((m.seen||0)>=(d.seen||0))?m:d; });
   return out; }
-function save(){ if(!P.current) return; try{ var disk=readState(P.current); if(disk&&SYNC) S=mergeState(S,disk,SYNC); localStorage.setItem(pkey(P.current),JSON.stringify(S)); SYNC=snap(S); }catch(e){} }
+function save(){ if(!P.current) return; try{ normState(S); var disk=readState(P.current); if(disk&&SYNC) S=mergeState(S,disk,SYNC); localStorage.setItem(pkey(P.current),JSON.stringify(S)); SYNC=snap(S); }catch(e){} Cloud.schedule(P.current); }
 function syncFromDisk(){ if(!P.current) return false; var disk=readState(P.current); if(!disk||!SYNC) return false; var before=JSON.stringify(S); S=mergeState(S,disk,SYNC); SYNC=snap(disk); return JSON.stringify(S)!==before; }
 function wstat(w){if(!S.words[w])S.words[w]={streak:0,right:0,wrong:0,seen:0};return S.words[w];}
+
+/* combine this browser's copy with the online copy: a Reset (newer epoch) wins, otherwise each device's
+   rewards take the larger tally, so repeating a merge never counts anything twice */
+function cloudMerge(a,b){ a=normState(snap(a)); b=normState(snap(b)); var ea=a.epoch||0, eb=b.epoch||0; if(ea!==eb) return ea>eb?a:b;
+  var out=Object.assign({},b,a); out.worlds={};
+  WORLD_KEYS.forEach(function(k){ var x=(a.worlds&&a.worlds[k])||blankWorld(), y=(b.worlds&&b.worlds[k])||blankWorld(), by={};
+    Object.keys(x.by).concat(Object.keys(y.by)).forEach(function(d){ by[d]=Math.max(x.by[d]||0,y.by[d]||0); });
+    out.worlds[k]={pearls:sumBy(by), wearLevel:(x.wearLevel!==undefined?x.wearLevel:y.wearLevel), by:by}; });
+  out.totalCorrect=Math.max(a.totalCorrect||0,b.totalCorrect||0); out.bestStreak=Math.max(a.bestStreak||0,b.bestStreak||0);
+  out.words={}; var aw=a.words||{}, bw=b.words||{};
+  Object.keys(aw).concat(Object.keys(bw)).forEach(function(k){ var x=aw[k], y=bw[k], w=!y?x:!x?y:((x.seen||0)>=(y.seen||0)?x:y);
+    if(x&&y&&(x.mastered||y.mastered)&&!w.mastered) w=Object.assign({},w,{mastered:true}); out.words[k]=w; });
+  return out; }
+/* key-order-proof comparison */
+function canon(o){ if(Array.isArray(o)) return '['+o.map(canon).join(',')+']';
+  if(o&&typeof o==='object') return '{'+Object.keys(o).filter(function(k){ return o[k]!==undefined; }).sort().map(function(k){ return JSON.stringify(k)+':'+canon(o[k]); }).join(',')+'}';
+  return JSON.stringify(o); }
+
+/* online saves: the save service holds every player's progress so all devices share it. Each save names the
+   version it started from; if another device saved first, the two copies are merged and sent again. */
+var Cloud=(function(){
+  var status='', timers={}, running={}, conflicts={}, fails=0, retryT=null;
+  function mkey(id){ return 'spelling-worlds-sync-'+id; }
+  function meta(id){ var m=null; try{ m=JSON.parse(localStorage.getItem(mkey(id))); }catch(e){} return m||{rev:0,dirty:false}; }
+  function setMeta(id,m){ try{ localStorage.setItem(mkey(id),JSON.stringify(m)); }catch(e){} }
+  function call(method,path,body){ if(!CLOUD||!window.fetch) return Promise.reject(new Error('no save service'));
+    var o={method:method,cache:'no-store'}; if(body){ o.body=JSON.stringify(body); o.headers={'Content-Type':'text/plain'}; }
+    return fetch(CLOUD+path,o).then(function(r){ if(r.status!==200) throw new Error('HTTP '+r.status);
+      return r.json().then(function(j){ return {conflict:!!j.conflict,body:j}; }); }); }
+  /* this browser's copy with the one-time repairs applied, which is what the game itself would save */
+  function localCopy(id){ return readState(id)?stateFor(id):null; }
+  function show(s){ status=s; renderSync(s); }
+  function busy(){ var k; for(k in running){ if(running[k]) return true; } for(k in timers){ if(timers[k]) return true; } return false; }
+  function settle(){ if(!busy()) show('saved'); }
+  function offline(){ fails++; show('offline'); clearTimeout(retryT); retryT=setTimeout(syncAll,Math.min(60000,4000*fails)); }
+  function changed(id){ if(P.current===id) refreshFromDisk(); if(G&&G.screen==='scr-profiles') renderProfiles(); }
+  /* fold the online copy into this browser's copy; true when this browser still has something to send */
+  function absorb(id,rev,remote){ var local=localCopy(id), merged=remote?(local?cloudMerge(local,remote):normState(snap(remote))):local, m=meta(id);
+    m.rev=rev; m.dirty=!!merged&&(!remote||canon(merged)!==canon(remote)); setMeta(id,m);
+    if(merged&&(!local||canon(merged)!==canon(local))){ try{ localStorage.setItem(pkey(id),JSON.stringify(merged)); }catch(e){} changed(id); }
+    return m.dirty; }
+  function push(id){ clearTimeout(timers[id]); timers[id]=null; if(running[id]) return;
+    var st=localCopy(id); if(!st) return; var m=meta(id); running[id]=true; show('saving');
+    call('POST','/saves/'+encodeURIComponent(id),{rev:m.rev,state:st}).then(function(r){ running[id]=false; fails=0;
+      if(r.conflict){ var more=absorb(id,r.body.rev,r.body.state); conflicts[id]=(conflicts[id]||0)+1;
+        if(more&&conflicts[id]<5) push(id); else if(more) offline(); else { conflicts[id]=0; settle(); } return; }
+      conflicts[id]=0; var m2=meta(id); m2.rev=r.body.rev; m2.dirty=canon(localCopy(id))!==canon(st); setMeta(id,m2);
+      if(m2.dirty) push(id); else settle();
+    },function(){ running[id]=false; offline(); }); }
+  function schedule(id){ if(!id||!CLOUD) return; var m=meta(id); if(!m.dirty){ m.dirty=true; setMeta(id,m); }
+    clearTimeout(timers[id]); timers[id]=setTimeout(function(){ push(id); },800); if(status!=='offline') show('saving'); }
+  function pull(id){ if(!id||!CLOUD) return Promise.resolve();
+    return call('GET','/saves/'+encodeURIComponent(id)).then(function(r){ fails=0; if(absorb(id,r.body.rev,r.body.state)) push(id); else settle(); },offline); }
+  /* the player screen shows everyone, so fetch all four saves at once; saves the service lacks are sent up */
+  function syncAll(){ if(!CLOUD) return Promise.resolve();
+    return call('GET','/saves').then(function(r){ fails=0; var ps=(r.body&&r.body.players)||{};
+      PLAYERS.forEach(function(p){ var x=ps[p.id];
+        if(x){ if(absorb(p.id,x.rev,x.state)) push(p.id); }
+        else if(readState(p.id)){ var m=meta(p.id); m.rev=0; m.dirty=true; setMeta(p.id,m); push(p.id); } });
+      settle(); },offline); }
+  window.addEventListener('online',function(){ syncAll(); });
+  document.addEventListener('visibilitychange',function(){ if(document.hidden){ for(var id in timers){ if(timers[id]) push(id); } } else syncAll(); });
+  return {schedule:schedule, pull:pull, syncAll:syncAll, idle:function(){ return !busy(); }, status:function(){ return status; }};
+})();
+var SYNC_TEXT={saving:'Saving online...',saved:'Saved online',offline:'Not connected: saving on this device for now'};
+function renderSync(s){ var els=document.querySelectorAll('.sync-note'); for(var i=0;i<els.length;i++){ els[i].textContent=SYNC_TEXT[s]||''; els[i].hidden=!SYNC_TEXT[s]; els[i].classList.toggle('off',s==='offline'); } }
 
 /* sound effects, synthesized so nothing needs downloading */
 var SFX=(function(){
@@ -1721,7 +1803,7 @@ function renderProfiles(){ var keepS=S, keepK=K_INK, html='';
     html+='<button type="button" class="profile-card'+(p.id===(P.current||P.last)?' on':'')+'" data-id="'+p.id+'">'+axoSVG({plain:true,mood:'happy'})+'<span class="pc-name">'+esc(p.name)+'</span><span class="pc-sub">'+gradeName()+', level '+lv+'</span></button>'; });
   S=keepS; K_INK=keepK; $('profileGrid').innerHTML=html; }
 function showProfiles(){ clearTimeout(G.timer); clearTimeout(G.vtimer); clearTimeout(G.ttimer); Voice.stop(); G.cur=null; renderProfiles(); show('scr-profiles'); }
-function selectProfile(id){ var p=profileById(id); if(!p) return; P.current=id; wordSel=null; wordFilter='all'; $('wordDetail').innerHTML='<p class="hint-text">Tap a word to hear it and see what it means.</p>'; saveProfiles(); loadState(id); S.kid=p.name; save(); applyWorld(); renderSound(); renderHome(); show('scr-home'); }
+function selectProfile(id){ var p=profileById(id); if(!p) return; P.current=id; wordSel=null; wordFilter='all'; $('wordDetail').innerHTML='<p class="hint-text">Tap a word to hear it and see what it means.</p>'; saveProfiles(); loadState(id); S.kid=p.name; save(); applyWorld(); renderSound(); renderHome(); show('scr-home'); Cloud.pull(id); }
 /* hover previews: show a world's whole look without changing anything */
 function previewWorld(w,st){ var keepS=S; if(st) S=st; PREVIEW=w;
   var D=W(); document.documentElement.setAttribute('data-world',w); K_INK=D.ink; $('brand').textContent=D.brand;
@@ -1815,13 +1897,13 @@ if(HOVER){
   s.style.cssText='left:'+(Math.random()*100)+'%;width:'+size+'px;height:'+size+'px;--c:'+cols[i%5]+';animation-duration:'+(10+Math.random()*13)+'s;animation-delay:'+(-Math.random()*22)+'s;'; b.appendChild(s); } })();
 
 /* small handle for automated tests */
-window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},world:world,save:save,startRound:startRound,levelFor:levelFor,WORDS3:WORDS3,WORDS4:WORDS4};
+window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},world:world,save:save,startRound:startRound,levelFor:levelFor,WORDS3:WORDS3,WORDS4:WORDS4,cloud:Cloud,selectProfile:selectProfile,DEV:DEV};
 /* pick up progress saved by another tab, or by this tab before it went to sleep */
 function refreshFromDisk(){ if(!syncFromDisk()) return; $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 window.addEventListener('storage',function(e){ if(P.current&&e.key===pkey(P.current)) refreshFromDisk(); });
 document.addEventListener('visibilitychange',function(){ if(!document.hidden) refreshFromDisk(); });
 window.addEventListener('pageshow',function(e){ if(e.persisted) refreshFromDisk(); });
-function boot(){ loadProfiles(); P.last=P.current; P.current=null; applyWorld(); renderSound(); showProfiles(); }
+function boot(){ loadProfiles(); P.last=P.current; P.current=null; applyWorld(); renderSound(); showProfiles(); Cloud.syncAll(); }
 var hot=window.claude&&window.claude.hot;
 if(hot&&typeof hot.ready==='function'){ hot.ready(boot); } else { boot(); }
 try{ if(hot&&typeof hot.snapshot==='function') hot.snapshot(function(){ return {screen:G.screen}; }); }catch(e){}

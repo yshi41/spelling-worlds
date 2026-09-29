@@ -1,0 +1,9 @@
+{
+  "name": "spelling-worlds-saves",
+  "main": "src/index.js",
+  "compatibility_date": "2026-06-01",
+  "workers_dev": true,
+  "d1_databases": [
+    { "binding": "DB", "database_name": "spelling-worlds-saves", "database_id": "5dae7dec-b877-4e45-ab21-4c50c54593f6" }
+  ]
+}
