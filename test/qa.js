@@ -64,7 +64,7 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
   ok(await count('.profile-card') === 4, 'four player cards');
   ok((await page.$$eval('.profile-card .pc-name', els => els.map(e => e.textContent.trim()).join(','))) === 'Charlie,Riley,Vera,Cora', 'players in order');
   ok((await text('.profile-card[data-id="cora"] .pc-sub')).startsWith('4th grade'), 'Cora defaults to 4th grade');
-  await page.evaluate(() => localStorage.clear());
+  await (async () => { await sleep(600); Object.keys(cloud.store).forEach(k => delete cloud.store[k]); })();
 
   console.log('B. Ocean world, every level and character');
   await goCora();
@@ -118,7 +118,7 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
     const tag = w + 'x' + h;
     await page.setViewport({ width: w, height: h, isMobile: w < 800, hasTouch: w < 800 });
     await page.goto(URL, { waitUntil: 'load' }); await sleep(400);
-    await page.evaluate(() => localStorage.clear()); await page.reload({ waitUntil: 'load' }); await sleep(400);
+    await (async () => { await sleep(600); Object.keys(cloud.store).forEach(k => delete cloud.store[k]); })(); await page.reload({ waitUntil: 'load' }); await sleep(400);
     await probe(tag + ' players');
     if (w === 320 || w === 390 || w === 844) await page.screenshot({ path: 'qa-' + w + '-players.png' });
     for (const who of ['charlie', 'riley', 'vera', 'cora']) {

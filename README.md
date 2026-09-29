@@ -14,9 +14,11 @@ A spelling bee practice game for four players: Charlie, Riley, Vera, and Cora. E
 
 ## Saving
 
-Progress saves online, so every device and browser shows the same levels and rewards. The home screen says **Saved online** when the latest progress has reached the save service. With no connection it keeps playing, saves on the device, and sends everything up once it reconnects.
+Progress lives only online. Nothing about levels or rewards is stored in the browser: the game loads every player's save from the save service when it opens, and sends each change within a moment. The home screen says **Saved online** once a change has landed. If the service can't be reached, the player screen waits with a **Try again** button, and during play a note says progress is not saved until it reconnects.
 
-The save service is a small Cloudflare Worker in `worker/` (`https://spelling-worlds-saves.yshi41.workers.dev`) backed by a D1 database with one row per player, plus a history of every save for recovery. A save only lands if it names the version it started from; when another device saved first, the game merges the two copies and sends again. Rewards are tallied per device inside each save, so merging never counts anything twice, and the service refuses any save that lowers rewards unless it comes from **Reset this player's progress**.
+The save service is a small Cloudflare Worker in `worker/` (`https://spelling-worlds-saves.yshi41.workers.dev`) backed by a D1 database with one row per player, plus a history of every save for recovery. A save only lands if it names the version it started from; when another device saved first, the game merges the two copies and sends again. The service refuses any save that lowers rewards unless it comes from **Reset this player's progress**.
+
+Saves from before online saving are picked up once: when a browser that still holds one opens the game, anything it has beyond the online save is added online, and the old copy is deleted from the browser.
 
 To change the service: `cd worker`, edit `src/index.js`, then `npx wrangler deploy`. `schema.sql` creates the tables (`npx wrangler d1 execute spelling-worlds-saves --remote --file=schema.sql`).
 
