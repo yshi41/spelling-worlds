@@ -282,6 +282,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.click('.profile-card[data-id="cora"]'); await sleep(600);
   ok(await text('#lbLevel') === 'Level 10' && await count('#scene [data-lv="10"].on') > 0 && await count('#axoHome .acc.on') >= 5, 'ocean level 10 shows its scenery and outfit');
   await page.screenshot({ path: 'cora-10.png' });
+  await page.evaluate(() => document.getElementById('resetBtn').click()); await sleep(200); await page.evaluate(() => document.getElementById('resetYes').click()); await sleep(400);
+  ok(await world() === 'ocean' && await count('.char-chip[data-char="jellyfish"]') === 1 && await text('#lbLevel') === 'Level 0', 'reset keeps Cora in the ocean');
   await page.click('#switchBtn'); await sleep(300); await page.click('.profile-card[data-id="charlie"]'); await sleep(500);
 
   console.log('11. Sound toggle and reset');

@@ -31,3 +31,5 @@ npm test
 ```
 
 It expects Chrome at `C:/Program Files/Google/Chrome/Application/chrome.exe`; edit the path at the top of the script if yours differs.
+
+`node qa.js` sweeps the published site instead: every ocean level and character, a two-tab save merge, reset, eight phone-to-desktop viewports with the play flows, the keyboard-open view, and text contrast in light and dark mode. Pass a file path to run it against a local copy.
