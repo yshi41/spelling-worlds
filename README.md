@@ -10,7 +10,8 @@ A spelling bee practice game for six players: Charlie, Riley, Vera, Cora, Addie,
 - **Cora** always plays in the jellyfish ocean: jellyfish and friends, bubbles as rewards, with either word list.
 - **Addie** starts in the bow boutique: hair bows, scrunchies, clips, and a headband bunny, with ribbons as rewards.
 - **Amy** starts in the boba shop: milk tea, taro, matcha, strawberry, mango, and a boba pearl, with boba as rewards.
-- **World button** on the home screen opens the list of six worlds; tapping one previews it, and **Save world** keeps it (saved online). Level and rewards stay the same in every world. Level and rewards stay the same in every world, and the pick is saved online.
+- **World button** on the home screen opens the list of six worlds; tapping one previews it, and **Save world** keeps it (saved online).
+- **Every character levels up on its own.** Rewards and levels belong to one character in one world, so a kid can max out the axolotl, then start the octopus at level 0, then try the boba shop from scratch. Each character chip shows its own level. Mastered words are shared, so the word goals for levels 11 to 20 count the same for every character.
 - **Tile Time** earns rewards but never counts toward mastering a word; only Spell It does.
 - A big badge on every screen shows which word list is in use: blue for 3rd grade words, purple for 4th grade words.
 - Each word is read aloud with a sentence (browser text-to-speech). Type it, or tap letter tiles into order.
@@ -21,7 +22,7 @@ A spelling bee practice game for six players: Charlie, Riley, Vera, Cora, Addie,
 
 Progress lives only online. Nothing about levels or rewards is stored in the browser: the game loads every player's save from the save service when it opens, and sends each change within a moment. The home screen says **Saved online** once a change has landed. If the service can't be reached, the player screen waits with a **Try again** button, and during play a note says progress is not saved until it reconnects.
 
-The save service is a small Cloudflare Worker in `worker/` (`https://spelling-worlds-saves.yshi41.workers.dev`) backed by a D1 database with one row per player, plus a history of every save for recovery. A save only lands if it names the version it started from; when another device saved first, the game merges the two copies and sends again. The service refuses any save that lowers rewards unless it comes from **Reset this player's progress**.
+The save service is a small Cloudflare Worker in `worker/` (`https://spelling-worlds-saves.yshi41.workers.dev`) backed by a D1 database with one row per player, plus a history of every save for recovery. A save only lands if it names the version it started from; when another device saved first, the game merges the two copies and sends again. The service refuses any save that lowers rewards, for a world or for any one character, unless it comes from **Reset this player's progress**. Each world keeps `pearls` (everything earned there) and `chars`, one record per character; a save from before per-character levels gives the world's rewards to the character that was picked there.
 
 Saves from before online saving are picked up once: when a browser that still holds one opens the game, anything it has beyond the online save is added online, and the old copy is deleted from the browser.
 
@@ -43,7 +44,7 @@ npm install
 npm test
 ```
 
-It expects Chrome at `C:/Program Files/Google/Chrome/Application/chrome.exe`; edit the path at the top of the script if yours differs.
+It expects Chrome at `C:/Program Files/Google/Chrome/Application/chrome.exe`; set `CHROME=/path/to/chrome` if yours lives elsewhere.
 
 Both suites also check that the game is online-only: the code never writes browser storage, cookies, IndexedDB, or caches; every run records any such write and fails on one; and a device with browser storage blocked still plays and saves.
 

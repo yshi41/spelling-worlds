@@ -2,8 +2,29 @@
 /* the game's own merge (index.html mergeState): the save was made from base, the service now holds cur;
    keep both sets of changes. A newer epoch (Reset) wins outright. */
 const WORLD_KEYS = ['lagoon', 'candy', 'canopy', 'ocean', 'bows', 'boba'];
+const CHAR_KEY = { lagoon: 'charLagoon', candy: 'charCandy', canopy: 'charCanopy', ocean: 'charOcean', bows: 'charBows', boba: 'charBoba' };
+const FIRST_CHAR = { lagoon: 'axolotl', candy: 'bear', canopy: 'sloth', ocean: 'jellyfish', bows: 'bow', boba: 'milktea' };
 const SETTINGS = ['kid', 'grade', 'gradePicked', 'charLagoon', 'charCandy', 'charCanopy', 'charOcean', 'charBows', 'charBoba', 'look', 'theme', 'sound', 'roundLen', 'restoredId', '_sid'];
+const clone = o => JSON.parse(JSON.stringify(o));
+
+/* each character keeps its own rewards in worlds[k].chars[id]. A save from before that gives the world's
+   rewards to the character picked there (index.html migrateWorld does the same). */
+export function migrate(st) {
+  if (!st || !st.worlds) return st;
+  WORLD_KEYS.forEach(k => {
+    const w = st.worlds[k];
+    if (!w || w.chars) return;
+    const id = st[CHAR_KEY[k]] || FIRST_CHAR[k];
+    w.chars = {};
+    if ((w.pearls || 0) > 0 || w.wearLevel != null) w.chars[id] = { pearls: w.pearls || 0, wearLevel: w.wearLevel === undefined ? null : w.wearLevel };
+    delete w.wearLevel;
+  });
+  return st;
+}
+
+const add = (m, d, b) => Math.max(0, Math.max(d || 0, b || 0) + ((m || 0) - (b || 0)));
 export function mergeState(mem, disk, base) {
+  mem = migrate(clone(mem)); disk = migrate(clone(disk)); base = migrate(clone(base));
   const me = mem.epoch || 0, de = disk.epoch || 0, be = base.epoch || 0;
   if (me !== be) return mem;
   if (de !== be) return disk;
@@ -11,8 +32,13 @@ export function mergeState(mem, disk, base) {
   SETTINGS.forEach(k => { if (mem[k] !== undefined) out[k] = mem[k]; });
   out.worlds = {};
   WORLD_KEYS.forEach(k => {
-    const m = (mem.worlds && mem.worlds[k]) || { pearls: 0 }, d = (disk.worlds && disk.worlds[k]) || { pearls: 0 }, b = (base.worlds && base.worlds[k]) || { pearls: 0 };
-    out.worlds[k] = { pearls: Math.max(0, Math.max(d.pearls || 0, b.pearls || 0) + ((m.pearls || 0) - (b.pearls || 0))), wearLevel: (m.wearLevel !== undefined ? m.wearLevel : d.wearLevel) };
+    const blank = { pearls: 0, chars: {} };
+    const m = (mem.worlds && mem.worlds[k]) || blank, d = (disk.worlds && disk.worlds[k]) || blank, b = (base.worlds && base.worlds[k]) || blank;
+    const w = out.worlds[k] = { pearls: add(m.pearls, d.pearls, b.pearls), chars: {} };
+    new Set(Object.keys(m.chars || {}).concat(Object.keys(d.chars || {}))).forEach(id => {
+      const mc = (m.chars || {})[id] || {}, dc = (d.chars || {})[id] || {}, bc = (b.chars || {})[id] || {};
+      w.chars[id] = { pearls: add(mc.pearls, dc.pearls, bc.pearls), wearLevel: mc.wearLevel !== undefined ? mc.wearLevel : (dc.wearLevel === undefined ? null : dc.wearLevel) };
+    });
   });
   out.totalCorrect = Math.max(0, Math.max(disk.totalCorrect || 0, base.totalCorrect || 0) + ((mem.totalCorrect || 0) - (base.totalCorrect || 0)));
   out.bestStreak = Math.max(mem.bestStreak || 0, disk.bestStreak || 0);
@@ -27,11 +53,15 @@ export function mergeState(mem, disk, base) {
   return out;
 }
 
-/* rewards may only go down through a Reset, which bumps the epoch */
+/* rewards may only go down through a Reset, which bumps the epoch: a world's total, and each character's own */
 export function lowersProgress(next, prev) {
   if (!prev) return false;
   const ne = next.epoch || 0, pe = prev.epoch || 0;
   if (ne !== pe) return ne < pe;
-  const pw = prev.worlds || {}, nw = next.worlds || {};
-  return Object.keys(pw).some(k => ((nw[k] && nw[k].pearls) || 0) < ((pw[k] && pw[k].pearls) || 0));
+  const pw = prev.worlds || {}, nw = migrate(clone(next)).worlds || {};
+  return Object.keys(pw).some(k => {
+    const p = pw[k] || {}, n = nw[k] || {};
+    if ((n.pearls || 0) < (p.pearls || 0)) return true;
+    return Object.keys(p.chars || {}).some(id => ((n.chars && n.chars[id] && n.chars[id].pearls) || 0) < (p.chars[id].pearls || 0));
+  });
 }
