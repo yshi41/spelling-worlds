@@ -45,12 +45,13 @@ export default {
     const cur = await current(db, id);
     let merged = false;
     if (cur.rev !== base && cur.state) {
-      /* another device saved first. Merge here, so a page that is closing still gets its save in. If the page's
-         previous save landed but its reply was lost (maybe), that save is the true starting point. */
+      /* another device saved first. Merge here, so a page that is closing still gets its save in. If one of the
+         page's earlier saves landed but its reply was lost (sids), the newest such save is the true starting point. */
       let from = isObj(body.base) ? body.base : null;
-      if (isObj(body.maybe) && body.maybe._sid) {
-        const hit = await db.prepare("SELECT 1 FROM history WHERE player = ? AND rev > ? AND json_extract(state, '$._sid') = ?").bind(id, base, body.maybe._sid).first();
-        if (hit) from = body.maybe;
+      const sids = Array.isArray(body.sids) ? body.sids.filter(x => typeof x === 'string').slice(-20) : [];
+      if (sids.length) {
+        const hit = await db.prepare(`SELECT state FROM history WHERE player = ? AND rev > ? AND json_extract(state, '$._sid') IN (${sids.map(() => '?').join(',')}) ORDER BY rev DESC LIMIT 1`).bind(id, base, ...sids).first();
+        if (hit) from = JSON.parse(hit.state);
       }
       if (!from) return json({ conflict: true, ...cur });
       state = mergeState(state, cur.state, from); merged = true;

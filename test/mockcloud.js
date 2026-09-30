@@ -6,7 +6,7 @@ const KIDS = ['charlie', 'riley', 'vera', 'cora'];
 const clone = o => JSON.parse(JSON.stringify(o));
 const { mergeState, lowersProgress } = require('../worker/src/logic.mjs');
 function create() {
-  const store = {}, history = [], stats = { gets: 0, posts: 0, conflicts: 0, merges: 0, realHits: 0 }, ctl = { down: false, dropNextReply: false };
+  const store = {}, history = [], stats = { gets: 0, posts: 0, conflicts: 0, merges: 0, realHits: 0 }, ctl = { down: false, dropNextReply: false, dropReplies: 0, delayMs: 0 };
   const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
   const json = (req, body, status = 200) => req.respond({ status, headers: cors, contentType: 'application/json', body: JSON.stringify(body) });
   function handle(req) {
@@ -26,14 +26,19 @@ function create() {
     if (cur.rev !== body.rev) {
       if (!cur.state) return conflict();
       let from = isObj(body.base) ? body.base : null;
-      if (isObj(body.maybe) && body.maybe._sid && history.some(h => h.id === id && h.rev > body.rev && h.sid === body.maybe._sid)) from = body.maybe;
+      const sids = Array.isArray(body.sids) ? body.sids : [];
+      const hit = history.filter(h => h.id === id && h.rev > body.rev && sids.includes(h.sid)).sort((a, b) => b.rev - a.rev)[0];
+      if (hit) from = clone(hit.state);
       if (!from) return conflict();
       state = mergeState(state, clone(cur.state), from); merged = true; stats.merges++;
     }
     if (lowersProgress(state, cur.state)) return conflict();
-    store[id] = { rev: cur.rev + 1, state: clone(state) }; history.push({ id, rev: cur.rev + 1, sid: state._sid });
+    store[id] = { rev: cur.rev + 1, state: clone(state) }; history.push({ id, rev: cur.rev + 1, sid: state._sid, state: clone(state) });
     if (ctl.dropNextReply) { ctl.dropNextReply = false; return req.abort('connectionreset'); }
-    return json(req, merged ? { rev: cur.rev + 1, state, merged: true } : { rev: cur.rev + 1 });
+    if (ctl.dropReplies > 0) { ctl.dropReplies--; return req.abort('connectionreset'); }
+    const reply = merged ? { rev: cur.rev + 1, state, merged: true } : { rev: cur.rev + 1 };
+    if (ctl.delayMs) return new Promise(res => setTimeout(() => res(json(req, reply)), ctl.delayMs));
+    return json(req, reply);
   }
   async function attach(page) {
     await page.evaluateOnNewDocument(u => { window.SPELLING_CLOUD = u; }, MOCK);

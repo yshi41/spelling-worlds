@@ -938,7 +938,8 @@ function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 
 /* players: every kid's progress lives only on the save service (worker/). Nothing about levels or rewards is kept in this browser. */
-var PLAYERS=[{id:'charlie',name:'Charlie',grade:'4'},{id:'riley',name:'Riley',grade:'3'},{id:'vera',name:'Vera',grade:'4',theme:'canopy'},{id:'cora',name:'Cora',grade:'4',theme:'ocean'}];
+/* each kid has one world, so the word list never changes their world or level */
+var PLAYERS=[{id:'charlie',name:'Charlie',grade:'4',theme:'candy'},{id:'riley',name:'Riley',grade:'3',theme:'lagoon'},{id:'vera',name:'Vera',grade:'4',theme:'canopy'},{id:'cora',name:'Cora',grade:'4',theme:'ocean'}];
 var P={current:null};
 var CLOUD=(typeof window.SPELLING_CLOUD==='string')?window.SPELLING_CLOUD:'https://spelling-worlds-saves.yshi41.workers.dev';
 var WORLD_KEYS=['lagoon','candy','canopy','ocean'];
@@ -1009,14 +1010,17 @@ var Net=(function(){
   function retry(){ if(!LOADED) return refresh(); var any=false; for(var id in LIVE){ if(dirty(id)){ any=true; push(id); } } if(!any) refresh(); }
   /* the service changed under this page: fold its copy into the one being played */
   function absorb(id,rev,remote){ var o=ONLINE[id], mine=LIVE[id];
-    if(mine&&remote){ var base=(o&&o.state)||{epoch:remote.epoch||0,worlds:{},words:{},totalCorrect:0};
-      var merged=mergeState(mine,Object.assign(defaults(),remote),base); LIVE[id]=merged; if(P.current===id){ S=merged; refreshView(); } }
+    if(mine&&remote){ var full=Object.assign(defaults(),remote), merged;
+      if(o&&o.state) merged=mergeState(mine,full,o.state);
+      else { merged=raiseTo(full,mine); ['kid','grade','gradePicked','charLagoon','charCandy','charCanopy','charOcean','theme','sound','roundLen'].forEach(function(k){ if(mine[k]!==undefined) merged[k]=mine[k]; }); }
+      LIVE[id]=merged; if(P.current===id){ S=merged; refreshView(); } }
     ONLINE[id]={rev:rev,state:remote}; }
   /* each save carries the copy it started from (base), so the service can merge it with saves from other devices
-     in one trip, even while this page is closing. maybe: an earlier save whose reply never came back */
+     in one trip, even while this page is closing. sids: this page's earlier saves whose replies never came back;
+     the service checks its history for them, so a save that did land is never counted twice */
   function push(id){ clearTimeout(timers[id]); timers[id]=null; if(sending[id]||!LIVE[id]) return;
     var st=snap(LIVE[id]), o=ONLINE[id]||{rev:0,state:null}; st._sid=Math.random().toString(36).slice(2,12);
-    var body={rev:o.rev,state:st,base:o.state}; if(unconfirmed[id]) body.maybe=unconfirmed[id]; unconfirmed[id]=st;
+    var list=unconfirmed[id]||(unconfirmed[id]=[]), body={rev:o.rev,state:st,base:o.state}; if(list.length) body.sids=list.slice(-20); list.push(st._sid);
     sending[id]=true; show('saving');
     call('POST','/saves/'+encodeURIComponent(id),body).then(function(r){ sending[id]=false; fails=0; delete unconfirmed[id];
       if(r.conflict){ absorb(id,r.body.rev,r.body.state); if((conflicts[id]=(conflicts[id]||0)+1)>5){ conflicts[id]=0; failed(); return; } }
@@ -1030,7 +1034,8 @@ var Net=(function(){
   function refresh(){ if(!LOADED) show('loading');
     return call('GET','/saves').then(function(r){ fails=0; var ps=(r.body&&r.body.players)||{};
       PLAYERS.forEach(function(p){ var x=ps[p.id]||{rev:0,state:null}, o=ONLINE[p.id];
-        if(!LIVE[p.id]) ONLINE[p.id]=x; else if(!o||o.rev!==x.rev) absorb(p.id,x.rev,x.state); });
+        /* a save on its way (or one whose reply was lost) is merged by the service when it is sent; merging it here too would count it twice */
+        if(!LIVE[p.id]) ONLINE[p.id]=x; else if(sending[p.id]||unconfirmed[p.id]) return; else if(!o||o.rev!==x.rev) absorb(p.id,x.rev,x.state); });
       var first=!LOADED; LOADED=true; if(first) importOld();
       if(G&&G.screen==='scr-profiles') renderProfiles(); if(P.current&&G.screen==='scr-home') renderHome();
       for(var id in LIVE){ if(dirty(id)) push(id); } settle();
@@ -1800,7 +1805,7 @@ function renderHome(){
 }
 function renderProfiles(){ var keepS=S, keepK=K_INK, html='';
   PLAYERS.forEach(function(p){ S=playerState(p.id); K_INK=WORLDS[world()].ink; var lv=levelFor(SW().pearls);
-    html+='<button type="button" class="profile-card'+(p.id===(P.current||P.last)?' on':'')+'" data-id="'+p.id+'"'+(LOADED?'':' disabled')+'>'+axoSVG({plain:true,mood:'happy'})+'<span class="pc-name">'+esc(p.name)+'</span><span class="pc-sub">'+(LOADED?gradeName()+', level '+lv:'Loading...')+'</span></button>'; });
+    html+='<button type="button" class="profile-card'+(p.id===(P.current||P.last)?' on':'')+'" data-id="'+p.id+'"'+(LOADED?'':' disabled')+'>'+axoSVG({plain:true,mood:'happy'})+'<span class="pc-name">'+esc(p.name)+'</span><span class="pc-sub">'+(LOADED?(p.grade==='4'?'4th grade':'3rd grade')+', level '+lv:'Loading...')+'</span></button>'; });
   S=keepS; K_INK=keepK; $('profileGrid').innerHTML=html; }
 function showProfiles(){ clearTimeout(G.timer); clearTimeout(G.vtimer); clearTimeout(G.ttimer); Voice.stop(); G.cur=null; renderProfiles(); show('scr-profiles'); }
 function selectProfile(id){ var p=profileById(id); if(!p||!LOADED) return; P.current=id; wordSel=null; wordFilter='all'; $('wordDetail').innerHTML='<p class="hint-text">Tap a word to hear it and see what it means.</p>'; loadState(id); S.kid=p.name; save(); applyWorld(); renderSound(); renderHome(); show('scr-home'); }
@@ -1901,7 +1906,13 @@ if(HOVER){
 window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},world:world,save:save,startRound:startRound,levelFor:levelFor,WORDS3:WORDS3,WORDS4:WORDS4,net:Net,selectProfile:selectProfile,get ONLINE(){return ONLINE;},get LIVE(){return LIVE;}};
 /* redraw after the online copy changed under this page */
 function refreshView(){ $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
-function boot(){ P.current=null; applyWorld(); renderSound(); showProfiles(); Net.refresh(); }
+/* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
+var BUILD='2026-09-29.3';
+function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
+  fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
+    if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }
+document.addEventListener('visibilitychange',function(){ if(!document.hidden) checkBuild(); });
+function boot(){ checkBuild(); P.current=null; applyWorld(); renderSound(); showProfiles(); Net.refresh(); }
 var hot=window.claude&&window.claude.hot;
 if(hot&&typeof hot.ready==='function'){ hot.ready(boot); } else { boot(); }
 try{ if(hot&&typeof hot.snapshot==='function') hot.snapshot(function(){ return {screen:G.screen}; }); }catch(e){}
