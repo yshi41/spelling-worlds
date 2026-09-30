@@ -40,11 +40,23 @@ function create() {
     if (ctl.delayMs) return new Promise(res => setTimeout(() => res(json(req, reply)), ctl.delayMs));
     return json(req, reply);
   }
+  /* the game must keep nothing in the browser: record every write to browser storage, cookies, or IndexedDB.
+     Tests that plant an old pre-online save set window.__plantingOldSave first, so their writes are not counted. */
+  const storageWrites = [];
   async function attach(page) {
+    await page.exposeFunction('__storageWrite', what => { storageWrites.push(what); });
+    await page.evaluateOnNewDocument(() => {
+      const report = what => { if (!window.__plantingOldSave) window.__storageWrite(what); };
+      const setItem = Storage.prototype.setItem;
+      Storage.prototype.setItem = function (k, v) { report((this === window.sessionStorage ? 'sessionStorage ' : 'localStorage ') + k); return setItem.call(this, k, v); };
+      const cookie = Object.getOwnPropertyDescriptor(Document.prototype, 'cookie');
+      Object.defineProperty(document, 'cookie', { get() { return cookie.get.call(document); }, set(v) { report('cookie ' + String(v).split('=')[0]); cookie.set.call(document, v); } });
+      if (window.IDBFactory) { const open = IDBFactory.prototype.open; IDBFactory.prototype.open = function (n) { report('indexedDB ' + n); return open.apply(this, arguments); }; }
+    });
     await page.evaluateOnNewDocument(u => { window.SPELLING_CLOUD = u; }, MOCK);
     await page.setRequestInterception(true);
     page.on('request', handle);
   }
-  return { store, stats, ctl, attach, MOCK };
+  return { store, stats, ctl, attach, MOCK, storageWrites };
 }
 module.exports = { create };

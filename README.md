@@ -12,6 +12,7 @@ A spelling bee practice game for six players: Charlie, Riley, Vera, Cora, Addie,
 - **Amy** starts in the boba shop: milk tea, taro, matcha, strawberry, mango, and a boba pearl, with boba as rewards.
 - **Pick your world** on the home screen switches any kid to any of the six worlds. Level and rewards stay the same in every world, and the pick is saved online.
 - **Tile Time** earns rewards but never counts toward mastering a word; only Spell It does.
+- A big badge on every screen shows which word list is in use: blue for 3rd grade words, purple for 4th grade words.
 - Each word is read aloud with a sentence (browser text-to-speech). Type it, or tap letter tiles into order.
 - Misses show a letter-by-letter diff, then the word gets spelled out loud and retyped once to lock it in.
 - Correct answers earn rewards; streaks earn bonuses; every level adds an outfit piece to the character and something new to the scene.
@@ -43,5 +44,7 @@ npm test
 ```
 
 It expects Chrome at `C:/Program Files/Google/Chrome/Application/chrome.exe`; edit the path at the top of the script if yours differs.
+
+Both suites also check that the game is online-only: the code never writes browser storage, cookies, IndexedDB, or caches; every run records any such write and fails on one; and a device with browser storage blocked still plays and saves.
 
 `node qa.js` sweeps the published site instead, also with the stand-in save service: every ocean level and character, a two-tab save merge, reset, eight phone-to-desktop viewports with the play flows, the keyboard-open view, and text contrast in light and dark mode. Pass a file path to run it against a local copy.

@@ -567,6 +567,15 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
 .profile-card svg{width:120px;height:108px}
 .profile-card .pc-name{font-size:1.5rem}
 .profile-card .pc-sub{font-size:.85rem}
+/* which word list is in use, shown big on every screen: blue for 3rd grade, purple for 4th */
+.list-badge{display:inline-flex;align-items:center;gap:8px;font-family:var(--display),sans-serif;font-weight:700;font-size:1.1rem;color:#fff;border-radius:14px;padding:8px 16px;box-shadow:0 4px 0 rgba(0,0,0,.18);letter-spacing:.01em}
+.list-badge svg{width:22px;height:22px;flex:0 0 auto}
+.list-badge[data-g="3"]{background:#1D6FB8}
+.list-badge[data-g="4"]{background:#7A3FC2}
+.home-badge{margin:10px 0 2px;font-size:1.2rem}
+.play-badge{align-self:center;font-size:1.15rem}
+.sum-badge{display:flex;justify-content:center;margin-bottom:10px}
+@media (max-width:720px), (max-height:500px){ .play-badge{font-size:1rem;padding:6px 14px} .home-badge{font-size:1.05rem} }
 .profiles-card{text-align:center;max-width:560px;margin:0 auto}
 /* an odd last player card sits centered on its own row */
 .profile-card:last-child:nth-child(odd){grid-column:1/-1;justify-self:center;width:calc(50% - 6px)}
@@ -705,6 +714,7 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
         <div class="card">
           <div class="player-line"><span>Playing as <b id="playerName">Charlie</b></span><button class="btn btn-ghost btn-sm" id="switchBtn" type="button">Switch player</button><span class="sync-note" id="syncHome" aria-live="polite" hidden></span></div>
           <h1 class="title" id="homeTitle">Spelling Lagoon</h1>
+          <div class="list-badge home-badge" data-g="3"></div>
           <p class="sub" id="homeSub">The 50 third-grade bee words. Hear it, spell it, earn pearls, level up your character and the lagoon.</p>
           <div class="grade-row"><span class="glbl">Word list</span>
             <div class="seg" id="gradeSeg" role="group" aria-label="Word list"><button type="button" class="seg-btn on" data-g="3">3rd grade</button><button type="button" class="seg-btn" data-g="4">4th grade</button></div>
@@ -755,6 +765,7 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
         <div class="axo-box" id="axoPlay"></div>
       </div>
       <div class="card word-card">
+        <div class="list-badge play-badge" data-g="3"></div>
         <div class="notice" id="voiceNotice" hidden>This browser can't read words aloud. Use Meaning and Sentence for clues instead.</div>
         <div class="listen-row">
           <button class="btn btn-sky btn-big" id="hearBtn" type="button">Hear it</button>
@@ -782,6 +793,7 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
    </section>
    <section class="screen" id="scr-words" hidden>
     <div class="words-head">
+      <div class="list-badge" data-g="3"></div>
       <button class="btn btn-ghost btn-sm" id="wordsHome" type="button">Home</button>
       <div class="seg" role="group" aria-label="Word list"><button type="button" class="seg-btn on" data-g="3">3rd grade</button><button type="button" class="seg-btn" data-g="4">4th grade</button></div>
       <div class="chips" id="wordChips">
@@ -802,6 +814,7 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
         <div class="axo-box" id="axoSummary"></div>
         <div>
           <div class="big-stars" id="bigStars"></div>
+          <div class="sum-badge"><div class="list-badge" data-g="3"></div></div>
           <h2 class="sum-title" id="sumTitle">Sweet!</h2>
           <div class="sum-stats" id="sumStats"></div>
           <div id="missedWrap" hidden><span class="tr-label">Tricky words to practice</span><div class="missed-list" id="missedList"></div></div>
@@ -1045,7 +1058,7 @@ function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp
 
 /* players: every kid's progress lives only on the save service (worker/). Nothing about levels or rewards is kept in this browser. */
 /* each kid has one world, so the word list never changes their world or level */
-var PLAYERS=[{id:'charlie',name:'Charlie',grade:'4',theme:'candy'},{id:'riley',name:'Riley',grade:'3',theme:'lagoon'},{id:'vera',name:'Vera',grade:'4',theme:'canopy'},{id:'cora',name:'Cora',grade:'4',theme:'ocean'},{id:'addie',name:'Addie',grade:'3',theme:'bows'},{id:'amy',name:'Amy',grade:'3',theme:'boba'}];
+var PLAYERS=[{id:'charlie',name:'Charlie',grade:'4',theme:'candy'},{id:'riley',name:'Riley',grade:'3',theme:'lagoon'},{id:'vera',name:'Vera',grade:'4',theme:'canopy'},{id:'cora',name:'Cora',grade:'4',theme:'ocean'},{id:'addie',name:'Addie',grade:'3',theme:'bows'},{id:'amy',name:'Amy',grade:'4',theme:'boba'}];
 var P={current:null};
 var CLOUD=(typeof window.SPELLING_CLOUD==='string')?window.SPELLING_CLOUD:'https://spelling-worlds-saves.yshi41.workers.dev';
 var WORLD_KEYS=['lagoon','candy','canopy','ocean','bows','boba'];
@@ -2056,6 +2069,9 @@ function revealFeedback(){ if(!isPhone()) return; setTimeout(function(){ try{ $(
 
 /* world switch, characters, home, players */
 function mascotName(){ return charInfo(charId())[1]; }
+/* the word list badges: the grade is the only thing they show, in a color that stays the same in every world */
+function renderListBadges(){ var g=S.grade==='4'?'4':'3', els=document.querySelectorAll('.list-badge');
+  for(var i=0;i<els.length;i++){ els[i].setAttribute('data-g',g); els[i].innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4h11l3 3v13H5z" fill="#fff" opacity=".9"/><path d="M8 10h8M8 13.5h8M8 17h5" stroke="'+(g==='4'?'#7A3FC2':'#1D6FB8')+'" stroke-width="1.8" stroke-linecap="round"/></svg>'+(g==='4'?'4th':'3rd')+' grade words'; } }
 function applyWorld(){
   var w=world(), D=W();
   document.documentElement.setAttribute('data-world',w); K_INK=D.ink;
@@ -2063,7 +2079,7 @@ function applyWorld(){
   $('levelsTitle').textContent=D.levelsTitle; $('levelsHint').textContent=D.levelsHint;
   $('charHint').textContent=(w==='candy')?'Which candy do you want to be?':(w==='canopy')?'Who do you want to be in the rainforest?':(w==='ocean')?'Who do you want to be in the ocean?':(w==='bows')?'Which hair accessory do you want to be?':(w==='boba')?'Which drink do you want to be?':'Who do you want to be in the lagoon?';
   var b=document.querySelectorAll('.seg-btn'); for(var i=0;i<b.length;i++) b[i].classList.toggle('on',b[i].getAttribute('data-g')===S.grade);
-  $('gradeLabel').textContent=gradeName(); $('chipCrossed').hidden=(S.grade!=='3');
+  $('gradeLabel').textContent=gradeName(); $('chipCrossed').hidden=(S.grade!=='3'); renderListBadges();
   $('scene').innerHTML=buildScene();
   refreshMascots();
   renderScene(); renderLevelBar(false); $('pearlCount').textContent=SW().pearls;
@@ -2090,7 +2106,7 @@ function renderWorlds(){ var cur=world(), d=defaults();
 function setLook(k){ if(!WORLDS[k]||k===world()) return; S.look=k; save(); applyWorld(); renderHome(); SFX.warm(); SFX.pop(); jump('axoHome'); toast(W().brand+'!'); }
 function renderProfiles(){ var keepS=S, keepK=K_INK, html='';
   PLAYERS.forEach(function(p){ S=playerState(p.id); K_INK=WORLDS[world()].ink; var lv=levelFor(SW().pearls);
-    html+='<button type="button" class="profile-card'+(p.id===(P.current||P.last)?' on':'')+'" data-id="'+p.id+'"'+(LOADED?'':' disabled')+'>'+axoSVG({plain:true,mood:'happy'})+'<span class="pc-name">'+esc(p.name)+'</span><span class="pc-sub">'+(LOADED?(p.grade==='4'?'4th grade':'3rd grade')+', level '+lv:'Loading...')+'</span></button>'; });
+    html+='<button type="button" class="profile-card'+(p.id===(P.current||P.last)?' on':'')+'" data-id="'+p.id+'"'+(LOADED?'':' disabled')+'>'+axoSVG({plain:true,mood:'happy'})+'<span class="pc-name">'+esc(p.name)+'</span><span class="pc-sub">'+(LOADED?'Level '+lv:'Loading...')+'</span></button>'; });
   S=keepS; K_INK=keepK; $('profileGrid').innerHTML=html; }
 function showProfiles(){ clearTimeout(G.timer); clearTimeout(G.vtimer); clearTimeout(G.ttimer); Voice.stop(); G.cur=null; renderProfiles(); show('scr-profiles'); }
 function selectProfile(id){ var p=profileById(id); if(!p||!LOADED) return; P.current=id; wordSel=null; wordFilter='all'; $('wordDetail').innerHTML='<p class="hint-text">Tap a word to hear it and see what it means.</p>'; loadState(id); S.kid=p.name; save(); applyWorld(); renderSound(); renderHome(); show('scr-home'); }
@@ -2193,7 +2209,7 @@ window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},worl
 /* redraw after the online copy changed under this page */
 function refreshView(){ $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
-var BUILD='2026-09-30.1';
+var BUILD='2026-09-30.2';
 function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
   fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
     if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }

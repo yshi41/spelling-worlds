@@ -63,7 +63,7 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
   ok(await page.evaluate(() => [...document.fonts].some(f => /Fredoka/.test(f.family) && f.status === 'loaded')), 'Fredoka web font loaded', await page.evaluate(() => [...document.fonts].map(f => f.family + ':' + f.status).join(' ')));
   ok(await count('.profile-card') === 6, 'six player cards');
   ok((await page.$$eval('.profile-card .pc-name', els => els.map(e => e.textContent.trim()).join(','))) === 'Charlie,Riley,Vera,Cora,Addie,Amy', 'players in order');
-  ok((await text('.profile-card[data-id="cora"] .pc-sub')).startsWith('4th grade'), 'Cora defaults to 4th grade');
+  ok(await text('.profile-card[data-id="cora"] .pc-sub') === 'Level 0', 'Cora card shows her level');
   await (async () => { await sleep(600); Object.keys(cloud.store).forEach(k => delete cloud.store[k]); })();
 
   console.log('B. Ocean world, every level and character');
@@ -188,6 +188,11 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
   console.log('H. Errors and network');
   ok(errors.length === 0, 'no page or console errors', errors.slice(0, 4).join(' | '));
   ok(failedReq.length === 0, 'no failed requests', failedReq.slice(0, 4).join(' | '));
+  console.log('I. Online only: nothing is kept in the browser');
+  const html = URL.startsWith('file:') ? require('fs').readFileSync(path.resolve(process.argv[2]), 'utf8') : await (await fetch(URL + '?qa=' + Date.now(), { cache: 'no-store' })).text();
+  ok(html.length > 1000 && !/setItem|sessionStorage|indexedDB|document\.cookie|caches\.|openDatabase/.test(html), 'the published game code never writes browser storage, cookies, IndexedDB, or caches');
+  ok(cloud.storageWrites.length === 0, 'no browser storage writes during the whole sweep', cloud.storageWrites.slice(0, 5).join(', '));
+  ok((await page.evaluate(() => Object.keys(localStorage).length + document.cookie.length)) === 0, 'browser storage and cookies are empty after playing');
   await browser.close();
   console.log('\n' + passes + ' passed, ' + fails + ' failed, ' + warns + ' warnings');
   if (issues.length) { console.log('ISSUES:'); issues.forEach(i => console.log(' - ' + i)); }

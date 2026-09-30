@@ -33,10 +33,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   console.log('1. Player screen');
   ok(await visible('#scr-profiles'), 'player screen shown first');
   ok(await count('.profile-card') === 6, 'six player cards');
-  ok((await text('.profile-card[data-id="vera"] .pc-sub')).startsWith('4th grade'), 'Vera defaults to 4th grade');
-  ok((await text('.profile-card[data-id="cora"] .pc-sub')).startsWith('4th grade'), 'Cora defaults to 4th grade');
-  ok((await text('.profile-card[data-id="charlie"] .pc-sub')).startsWith('4th grade'), 'Charlie defaults to 4th grade');
-  ok((await text('.profile-card[data-id="riley"] .pc-sub')).startsWith('3rd grade'), 'Riley defaults to 3rd grade');
+  ok(await text('.profile-card[data-id="vera"] .pc-sub') === 'Level 0', 'player cards show only the level');
   ok(await world() === 'lagoon', 'default look is lagoon before choosing');
 
   console.log('2. Hover previews on player tiles');
@@ -57,12 +54,17 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   ok(await attr('.seg-btn.on', 'data-g') === '4', '4th grade selected');
   ok(await text('#axoNameHome') === 'Gummy Bear', 'default candy character');
   ok(await text('#gradeLabel') === '4th grade', 'mastered line says 4th grade');
+  ok(await text('.home-badge') === '4th grade words' && await attr('.home-badge', 'data-g') === '4', 'the home badge says 4th grade words');
   await page.hover('#gradeSeg .seg-btn[data-g="3"]'); await sleep(300);
   ok(await world() === 'candy', 'hovering 3rd grade keeps Charlie in the candy world');
   ok(await text('#axoNameHome') === 'Gummy Bear', 'and keeps her character');
   const lv0 = await text('#lbLevel');
   await page.click('#gradeSeg .seg-btn[data-g="3"]'); await sleep(300);
   ok(await world() === 'candy' && await text('#lbLevel') === lv0 && await text('#gradeLabel') === '3rd grade', 'the 3rd grade list keeps her world and level, only the words change');
+  ok(await text('.home-badge') === '3rd grade words' && await attr('.home-badge', 'data-g') === '3', 'the home badge says 3rd grade words');
+  await page.evaluate(() => { __spelling.startRound('spell'); }); await sleep(300);
+  ok(await visible('.play-badge') && await text('.play-badge') === '3rd grade words', 'the play screen shows 3rd grade words');
+  await page.evaluate(() => document.getElementById('quitBtn').click()); await sleep(200);
   await page.click('#gradeSeg .seg-btn[data-g="4"]'); await sleep(300);
   await away();
   ok(await world() === 'candy' && await text('#axoNameHome') === 'Gummy Bear', 'leaving restores candy and character');
@@ -176,7 +178,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const charliePearls = (await T()).pearls;
   await page.click('#switchBtn'); await sleep(350);
   ok(await visible('#scr-profiles'), 'switch shows the player screen');
-  ok((await text('.profile-card[data-id="charlie"] .pc-sub')).indexOf('level ' + t.level) >= 0, 'Charlie card shows her level');
+  ok((await text('.profile-card[data-id="charlie"] .pc-sub')).indexOf('Level ' + t.level) >= 0, 'Charlie card shows her level');
   await page.click('.profile-card[data-id="riley"]'); await sleep(500);
   ok(await world() === 'lagoon' && await text('#playerName') === 'Riley', 'Riley lands in the lagoon');
   ok((await T()).pearls === 0, 'Riley starts at 0 pearls');
@@ -370,13 +372,13 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.setViewport({ width: 1200, height: 900 });
   await waitSync(page); delete cloud.store.charlie; delete cloud.store.riley;
   await _reload({ waitUntil: 'load' }); await sleep(600);
-  ok((await text('.profile-card[data-id="charlie"] .pc-sub')).indexOf('level 10') >= 0, 'Charlie card shows level 10 after the restore');
+  ok((await text('.profile-card[data-id="charlie"] .pc-sub')).indexOf('Level 10') >= 0, 'Charlie card shows level 10 after the restore');
   await page.click('.profile-card[data-id="charlie"]'); await sleep(500);
   ok((await T()).pearls >= 1458 && await text('#lbLevel') === 'Level 10' && await world() === 'candy', 'Charlie is back at level 10 in the candy world');
   ok((await online('charlie')).restoredId === 'r20260927', 'restore is saved online and applies only once');
 
   await waitSync(page); cloud.store.riley = { rev: 9, state: { restoredId: 'r20260927b', worlds: { lagoon: { pearls: 360, wearLevel: null }, candy: { pearls: 0, wearLevel: null } } } }; await _reload({ waitUntil: 'load' }); await sleep(500);
-  ok((await text('.profile-card[data-id="riley"] .pc-sub')).indexOf('3rd grade, level 3') >= 0, 'the level 5 raise is undone: Riley back at level 3, keeping 10 earned since');
+  ok((await text('.profile-card[data-id="riley"] .pc-sub')).indexOf('Level 3') >= 0, 'the level 5 raise is undone: Riley back at level 3, keeping 10 earned since');
   await page.click('.profile-card[data-id="riley"]'); await sleep(400); ok((await T()).pearls === 171, 'Riley has 171 pearls');
 
   console.log('12e. Levels 11-20 need mastered words');
@@ -422,7 +424,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const newDevice = async () => { const ctx = await browser.createBrowserContext(); const pg = await ctx.newPage(); await cloud.attach(pg); pg.on('pageerror', e => errors.push('device pageerror: ' + e.message)); await pg.setViewport({ width: 1200, height: 900 }); return { ctx, pg }; };
   const d2 = await newDevice(), dev2 = d2.pg;
   await dev2.goto(URL, { waitUntil: 'load' }); await sleep(600);
-  ok(await dev2.$eval('.profile-card[data-id="vera"] .pc-sub', e => e.textContent) === '4th grade, level 11', 'another device shows Vera at level 11');
+  ok(await dev2.$eval('.profile-card[data-id="vera"] .pc-sub', e => e.textContent) === 'Level 11', 'another device shows Vera at level 11');
   await dev2.evaluate(() => __spelling.selectProfile('vera')); await sleep(300);
   ok(await pearlsIn(dev2, 'canopy') === onlinePearls('vera', 'canopy'), 'another device plays on from the online save');
   await sleep(700); await waitSync(dev2);
@@ -471,11 +473,11 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   cloud.ctl.down = false; await dev3.click('#syncRetry'); await sleep(600);
   ok(!(await dev3.$eval('.profile-card[data-id="cora"]', e => e.disabled)) && await dev3.$eval('#syncRetry', e => e.hidden), 'Try again loads the players');
   cloud.store.cora.state.worlds.ocean.pearls = 20;
-  await dev3.evaluate(ep => localStorage.setItem('spelling-worlds-cora', JSON.stringify({ epoch: ep, worlds: { ocean: { pearls: 100, wearLevel: null } }, words: { kelp: { streak: 3, right: 3, wrong: 0, seen: 3, mastered: true } } })), cloud.store.cora.state.epoch || 0);
+  await dev3.evaluate(ep => { window.__plantingOldSave = true; localStorage.setItem('spelling-worlds-cora', JSON.stringify({ epoch: ep, worlds: { ocean: { pearls: 100, wearLevel: null } }, words: { kelp: { streak: 3, right: 3, wrong: 0, seen: 3, mastered: true } } })); window.__plantingOldSave = false; }, cloud.store.cora.state.epoch || 0);
   await dev3.reload({ waitUntil: 'load' }); await sleep(900); await waitSync(dev3);
   ok(onlinePearls('cora', 'ocean') === 100 && cloud.store.cora.state.words.kelp.mastered === true, 'a save from before online saving is added to the online save once');
   ok((await gameKeys(dev3)).length === 0, 'and then removed from the browser');
-  ok(await dev3.$eval('.profile-card[data-id="cora"] .pc-sub', e => e.textContent) === '4th grade, level 2', 'Cora shows level 2 from it');
+  ok(await dev3.$eval('.profile-card[data-id="cora"] .pc-sub', e => e.textContent) === 'Level 2', 'Cora shows level 2 from it');
   await d3.ctx.close();
   ok(cloud.stats.realHits === 0, 'tests never reached the real save service');
 
@@ -523,6 +525,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   console.log('12h. Amy and the boba shop');
   await pickPlayer('amy');
+  ok(await text('.home-badge') === '4th grade words', 'Amy starts on the 4th grade words');
   ok(await world() === 'boba' && await text('#brand') === 'Spelling Boba' && await count('.char-chip') === 6, 'Amy plays in the boba shop with six characters');
   for (const id of ['milktea', 'taro', 'matcha', 'strawberrytea', 'mangoslush', 'bobapearl']) {
     await page.click('.char-chip[data-char="' + id + '"]'); await sleep(150);
@@ -540,6 +543,29 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.click('.world-chip[data-look="boba"]'); await sleep(400);
   ok(await world() === 'boba' && await text('#lbLevel') === lvV, 'Vera can visit the boba shop at her own level');
   await page.click('.world-chip[data-look="canopy"]'); await sleep(400);
+
+  console.log('12i. Online only: nothing is kept in the browser');
+  {
+    const src = require('fs').readFileSync(path.resolve(process.argv[2]), 'utf8');
+    const uses = (src.match(/localStorage|sessionStorage|indexedDB|document\.cookie|caches\.|setItem|openDatabase/g) || []);
+    ok(!/setItem|sessionStorage|indexedDB|document\.cookie|caches\.|openDatabase/.test(src), 'the game code never writes browser storage, cookies, IndexedDB, or caches');
+    ok(uses.length === 2 && /function importOld\(\)\{ var ls=null; try\{ ls=window\.localStorage;/.test(src) && /localStorage\.removeItem\(imported\[id\]\)/.test(src), 'the only browser storage code is the one-time pickup of old saves (read, then delete)');
+    ok(cloud.storageWrites.length === 0, 'no browser storage writes during the whole run' + (cloud.storageWrites.length ? ': ' + cloud.storageWrites.slice(0, 5).join(', ') : ''));
+    ok((await page.evaluate(() => Object.keys(localStorage).length + Object.keys(sessionStorage).length + document.cookie.length)) === 0, 'browser storage and cookies are empty');
+    /* a device where browser storage is blocked entirely still plays and saves */
+    const ctx = await browser.createBrowserContext(); const dev = await ctx.newPage(); await cloud.attach(dev);
+    dev.on('pageerror', e => errors.push('no-storage pageerror: ' + e.message));
+    await dev.evaluateOnNewDocument(() => { ['localStorage', 'sessionStorage'].forEach(k => Object.defineProperty(window, k, { get() { throw new Error(k + ' blocked'); } })); });
+    await dev.setViewport({ width: 1200, height: 900 }); await dev.goto(URL, { waitUntil: 'load' }); await sleep(700);
+    const before = cloud.store.riley.state.worlds.lagoon.pearls;
+    await dev.evaluate(() => __spelling.selectProfile('riley')); await sleep(300);
+    await dev.evaluate(() => { const w = __spelling.WORDS3.find(x => x.w === 'breeze'); __spelling.startRound('spell', [w]); document.getElementById('spellInput').value = w.w; document.getElementById('checkBtn').click(); document.getElementById('quitBtn').click(); });
+    await sleep(1200); await waitSync(dev);
+    ok(cloud.store.riley.state.worlds.lagoon.pearls === before + 10, 'with browser storage blocked, a correct answer still saves online (+10)');
+    await dev.reload({ waitUntil: 'load' }); await sleep(700); await dev.evaluate(() => __spelling.selectProfile('riley')); await sleep(300);
+    ok(await dev.evaluate(() => __spelling.S.worlds.lagoon.pearls) === before + 10, 'and comes back from the save service after a reload');
+    await ctx.close();
+  }
 
   console.log('13. Errors');
   ok(errors.length === 0, 'no page errors' + (errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''));
