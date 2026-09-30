@@ -517,6 +517,8 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 .char-chip{min-width:0;border:2px solid var(--line);background:var(--surface-2);border-radius:14px;padding:6px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px}
 .char-chip svg{width:56px;height:52px;overflow:visible}
 .char-chip .cc-name{font-family:var(--display),sans-serif;font-weight:600;font-size:.78rem;text-align:center;line-height:1.1}
+.char-chip .cc-lv{font-size:.66rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft)}
+.char-chip.on .cc-lv{color:var(--accent)}
 .char-chip.on{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 14%,var(--surface))}
 .char-chip .axo,.char-chip .gill,.char-chip .ear,.char-chip .eye-open{animation:none}
 
@@ -776,7 +778,7 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
           <div class="world-pick">
             <button class="btn btn-ghost btn-sm world-btn" id="worldBtn" type="button" aria-expanded="false" aria-controls="worldPanel"><span class="wb-ic" id="worldBtnIc"></span><span id="worldBtnName">World</span><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6l5 5 5-5"/></svg></button>
             <div class="world-panel" id="worldPanel" hidden>
-              <p class="hint-text">Pick a world to try it. Your level and rewards come with you.</p>
+              <p class="hint-text">Pick a world to try it. Every character in every world levels up on its own.</p>
               <div class="world-row" id="worldRow"></div>
               <div class="row wp-actions"><button class="btn btn-good btn-sm" id="worldSave" type="button" disabled>Save world</button><button class="btn btn-ghost btn-sm" id="worldCancel" type="button">Cancel</button></div>
             </div>
@@ -1105,11 +1107,13 @@ var RESTORE={charlie:{"id":"r20260927","worlds":{"lagoon":167,"candy":1458},"tot
 var PREVIEW=null;
 /* the world on screen: a preview, the kid's pick, or their own world */
 function world(){ return PREVIEW||(S.look&&WORLDS[S.look]?S.look:null)||S.theme||(S.grade==='4'?'candy':'lagoon'); }
-/* where a kid's rewards and level live: their own world, whichever world is on screen */
-function homeWorld(){ return S.theme||world(); }
 function W(){ return WORLDS[world()]; }
 function levels(){ return W().levels; }
-function SW(){ if(!S.worlds) S.worlds={}; var k=homeWorld(); if(!S.worlds[k]) S.worlds[k]=blankWorld(); return S.worlds[k]; }
+/* rewards and levels belong to one character in one world: a new character or a new world starts at level 0 */
+function WD(k){ if(!S.worlds) S.worlds={}; k=k||world(); if(!S.worlds[k]) S.worlds[k]=blankWorld(); if(!S.worlds[k].chars) migrateWorld(S,k); return S.worlds[k]; }
+function charRec(k,id,create){ var w=WD(k), r=w.chars[id]; if(r) return r; r={pearls:0,wearLevel:null}; if(create) w.chars[id]=r; return r; }
+/* the character on screen; reading never adds a record, so looking around does not count as a change */
+function SW(create){ return charRec(world(),charId(),create); }
 function confettiColors(){ return W().confetti; }
 function levelFor(p){ var L=levels(), m=masteredForLevels(), l=0; for(var i=0;i<L.length;i++){ if(p>=L[i].p&&m>=(L[i].m||0)) l=i+1; else break; } return l; }
 function wearLevel(){ var u=levelFor(SW().pearls), w=SW().wearLevel; return (w==null)?u:Math.min(w,u); }
@@ -1118,14 +1122,24 @@ function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()
 function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 
 /* players: every kid's progress lives only on the save service (worker/). Nothing about levels or rewards is kept in this browser. */
-/* each kid has one world, so the word list never changes their world or level */
+/* each kid starts in one world, so the word list never changes their world or level */
 var PLAYERS=[{id:'charlie',name:'Charlie',grade:'4',theme:'candy'},{id:'riley',name:'Riley',grade:'3',theme:'lagoon'},{id:'vera',name:'Vera',grade:'4',theme:'canopy'},{id:'cora',name:'Cora',grade:'4',theme:'ocean'},{id:'addie',name:'Addie',grade:'3',theme:'bows'},{id:'amy',name:'Amy',grade:'4',theme:'boba'}];
 var P={current:null};
 var CLOUD=(typeof window.SPELLING_CLOUD==='string')?window.SPELLING_CLOUD:'https://spelling-worlds-saves.yshi41.workers.dev';
 var WORLD_KEYS=['lagoon','candy','canopy','ocean','bows','boba'];
 /* each world's saved character choice */
 var CHAR_KEY={lagoon:'charLagoon',candy:'charCandy',canopy:'charCanopy',ocean:'charOcean',bows:'charBows',boba:'charBoba'};
-function blankWorld(){ return {pearls:0,wearLevel:null}; }
+/* worlds[k].pearls: everything earned in that world by any character. worlds[k].chars[id]: that character's own rewards and look */
+function blankWorld(){ return {pearls:0,chars:{}}; }
+/* saves from before per-character levels: the world's rewards go to the character that was picked there */
+function migrateWorld(st,k){ var w=st.worlds[k]; if(!w||w.chars) return;
+  var id=st[CHAR_KEY[k]]||defaults()[CHAR_KEY[k]]; w.chars={};
+  if((w.pearls||0)>0||w.wearLevel!=null) w.chars[id]={pearls:w.pearls||0,wearLevel:(w.wearLevel===undefined?null:w.wearLevel)};
+  delete w.wearLevel; }
+function migrate(st){ if(st&&st.worlds) WORLD_KEYS.forEach(function(k){ migrateWorld(st,k); }); return st; }
+/* raise a world to at least p rewards; anything added goes to the character picked there */
+function raiseWorld(st,k,p){ if(!st.worlds[k]) st.worlds[k]=blankWorld(); migrateWorld(st,k); var w=st.worlds[k], add=p-(w.pearls||0); if(add<=0) return;
+  var id=st[CHAR_KEY[k]]||defaults()[CHAR_KEY[k]], c=w.chars[id]||(w.chars[id]={pearls:0,wearLevel:null}); w.pearls=p; c.pearls+=add; }
 function defaults(){return {kid:'',charLagoon:'axolotl',charCandy:'bear',charCanopy:'sloth',charOcean:'jellyfish',charBows:'bow',charBoba:'milktea',grade:'3',sound:true,roundLen:'10',worlds:{lagoon:blankWorld(),candy:blankWorld(),canopy:blankWorld(),ocean:blankWorld(),bows:blankWorld(),boba:blankWorld()},words:{},bestStreak:0,totalCorrect:0,epoch:0};}
 var S=defaults();
 /* ONLINE[id] = {rev, state}: the service's copy as last seen. LIVE[id]: the copy being played on this page, sent to the service after every change. */
@@ -1138,7 +1152,7 @@ function canon(o){ if(Array.isArray(o)) return '['+o.map(canon).join(',')+']';
   return JSON.stringify(o); }
 /* one-time repair: raises a save to a known-good record, never lowers it */
 function applyRestore(id,st){ var R=(typeof RESTORE!=='undefined')&&RESTORE[id]; if(!R||st.restoredId===R.id) return st;
-  ['lagoon','candy'].forEach(function(k){ if(!st.worlds[k]) st.worlds[k]=blankWorld(); st.worlds[k].pearls=Math.max(st.worlds[k].pearls||0,R.worlds[k]||0); });
+  ['lagoon','candy'].forEach(function(k){ raiseWorld(st,k,R.worlds[k]||0); });
   st.totalCorrect=Math.max(st.totalCorrect||0,R.totalCorrect||0); st.bestStreak=Math.max(st.bestStreak||0,R.bestStreak||0);
   Object.keys(R.words||{}).forEach(function(k){ var a=st.words[k], b=R.words[k]; if(!a||(b.seen||0)>(a.seen||0)) st.words[k]=b; });
   st.restoredId=R.id; return st; }
@@ -1147,17 +1161,23 @@ function stateFor(id){ var o=ONLINE[id], st=Object.assign(defaults(),(o&&o.state
   if(id==='riley'&&st.restoredId==='r20260927b'){ var L=st.worlds.lagoon; if(L&&L.pearls>=350) L.pearls=L.pearls-350+161; st.restoredId='u20260927'; }
   var p=profileById(id); if(p&&!st.gradePicked) st.grade=p.grade; if(p) st.theme=p.theme||null;
   if(st.words.december&&!st.words.December){ st.words.December=st.words.december; delete st.words.december; }
-  return st; }
+  return migrate(st); }
 function playerState(id){ return LIVE[id]||stateFor(id); }
 function loadState(id){ S=playerState(id); LIVE[id]=S; }
 /* two devices saved from the same starting copy (base): keep both sets of changes */
 function mergeState(mem,disk,base){ if(!disk||!base) return mem;
+  mem=migrate(snap(mem)); disk=migrate(snap(disk)); base=migrate(snap(base));
   var me=mem.epoch||0, de=disk.epoch||0, be=base.epoch||0;
   if(me!==be) return mem; if(de!==be) return disk;
   var out=Object.assign({},disk);
   ['kid','grade','gradePicked','charLagoon','charCandy','charCanopy','charOcean','charBows','charBoba','look','theme','sound','roundLen','restoredId'].forEach(function(k){ if(mem[k]!==undefined) out[k]=mem[k]; });
-  out.worlds={}; WORLD_KEYS.forEach(function(k){ var m=(mem.worlds&&mem.worlds[k])||{pearls:0}, d=(disk.worlds&&disk.worlds[k])||{pearls:0}, b=(base.worlds&&base.worlds[k])||{pearls:0};
-    out.worlds[k]={pearls:Math.max(0,Math.max(d.pearls||0,b.pearls||0)+((m.pearls||0)-(b.pearls||0))), wearLevel:(m.wearLevel!==undefined?m.wearLevel:d.wearLevel)}; });
+  /* rewards: what the service holds plus what this copy added since base, for the world and for each character */
+  var add=function(m,d,b){ return Math.max(0,Math.max(d||0,b||0)+((m||0)-(b||0))); };
+  out.worlds={}; WORLD_KEYS.forEach(function(k){ var m=(mem.worlds&&mem.worlds[k])||blankWorld(), d=(disk.worlds&&disk.worlds[k])||blankWorld(), b=(base.worlds&&base.worlds[k])||blankWorld(), ids={};
+    var w=out.worlds[k]={pearls:add(m.pearls,d.pearls,b.pearls),chars:{}};
+    Object.keys(m.chars||{}).concat(Object.keys(d.chars||{})).forEach(function(id){ ids[id]=1; });
+    Object.keys(ids).forEach(function(id){ var mc=(m.chars||{})[id]||{}, dc=(d.chars||{})[id]||{}, bc=(b.chars||{})[id]||{};
+      w.chars[id]={pearls:add(mc.pearls,dc.pearls,bc.pearls),wearLevel:(mc.wearLevel!==undefined?mc.wearLevel:(dc.wearLevel===undefined?null:dc.wearLevel))}; }); });
   out.totalCorrect=Math.max(0,Math.max(disk.totalCorrect||0,base.totalCorrect||0)+((mem.totalCorrect||0)-(base.totalCorrect||0)));
   out.bestStreak=Math.max(mem.bestStreak||0,disk.bestStreak||0);
   out.words={}; var mw=mem.words||{}, dw=disk.words||{}, bw=base.words||{}, keys={};
@@ -1168,8 +1188,8 @@ function mergeState(mem,disk,base){ if(!disk||!base) return mem;
     else out.words[k]=((m.seen||0)>=(d.seen||0))?m:d; });
   return out; }
 /* a save from before online saving: add whatever it has that the online save lacks, never lowering anything */
-function raiseTo(cur,old){ var out=snap(cur); if((old.epoch||0)<(cur.epoch||0)) return out;
-  WORLD_KEYS.forEach(function(k){ var o=old.worlds&&old.worlds[k]; if(!out.worlds[k]) out.worlds[k]=blankWorld(); if(o&&(o.pearls||0)>(out.worlds[k].pearls||0)) out.worlds[k].pearls=o.pearls; });
+function raiseTo(cur,old){ var out=migrate(snap(cur)); if((old.epoch||0)<(cur.epoch||0)) return out;
+  WORLD_KEYS.forEach(function(k){ var o=old.worlds&&old.worlds[k]; if(o) raiseWorld(out,k,o.pearls||0); });
   out.totalCorrect=Math.max(out.totalCorrect||0,old.totalCorrect||0); out.bestStreak=Math.max(out.bestStreak||0,old.bestStreak||0);
   Object.keys(old.words||{}).forEach(function(w){ var a=out.words[w], b=old.words[w]; if(a&&(a.seen||0)>=(b.seen||0)) return; out.words[w]=(a&&a.mastered&&!b.mastered)?Object.assign({},b,{mastered:true}):b; });
   return out; }
@@ -1964,12 +1984,12 @@ function flyPearls(n,fromEl){
 function countTo(el,from,to,dur){ var t0=performance.now(); function f(t){ var k=Math.min(1,(t-t0)/dur); el.textContent=Math.round(from+(to-from)*(1-Math.pow(1-k,3))); if(k<1) requestAnimationFrame(f); } requestAnimationFrame(f);
   var st=$('pearlStat'); st.classList.remove('pulse'); void st.offsetWidth; st.classList.add('pulse'); }
 function addPearls(n,fromEl,lvBefore){
-  var before=SW().pearls; SW().pearls+=n; if(G.stats) G.stats.pearls+=n;
+  var me=SW(true), before=me.pearls; me.pearls+=n; WD().pearls=(WD().pearls||0)+n; if(G.stats) G.stats.pearls+=n;
   flyPearls(Math.min(6,Math.ceil(n/3)),fromEl); floatText('+'+n,fromEl);
   var who=P.current, after=SW().pearls, lv0=levels(), where=W().where;
   setTimeout(function(){ if(P.current!==who) return; countTo($('pearlCount'),before,after,600); renderLevelBar(false); },500);
   var L0=(lvBefore!=null?lvBefore:levelFor(before)), L1=levelFor(SW().pearls);
-  if(L1>L0){ SW().wearLevel=null;
+  if(L1>L0){ me.wearLevel=null;
     setTimeout(function(){ if(P.current!==who||levels()!==lv0) return; setOutfit(); renderScene(); renderLevelBar(true); SFX.unlock(); sceneParty(5000); bigConfetti(); shockwave();
       for(var l=L0+1;l<=L1;l++){ var L=lv0[l-1]; Banners.push({kind:'unlock',title:'Level '+l+'!',sub:'New: '+L.o+', plus '+L.l+' '+where,svg:axoSVG({mood:'happy'}),level:l,ms:3200}); }
     },1300); }
@@ -2155,8 +2175,9 @@ function applyWorld(){
 }
 function refreshMascots(){ $('axoHome').innerHTML=axoSVG(); $('axoPlay').innerHTML=axoSVG(); $('axoSummary').innerHTML=axoSVG({mood:'happy'}); setOutfit(); $('axoNameHome').textContent=mascotName(); }
 function renderChars(){ var L=charList(), cur=charId();
-  $('charRow').innerHTML=L.map(function(c){ return '<button type="button" class="char-chip'+(c[0]===cur?' on':'')+'" data-char="'+c[0]+'" aria-label="'+esc(c[1])+'">'+axoSVG({char:c[0],plain:true,mood:c[0]===cur?'happy':'neutral'})+'<span class="cc-name">'+esc(c[1])+'</span></button>'; }).join(''); }
-function setChar(id){ S[CHAR_KEY[world()]]=id; save(); refreshMascots(); renderChars(); renderLevels(); SFX.warm(); SFX.pop(); jump('axoHome'); bubble('homeBubble',pick(['Ready to spell!','Let\'s go, '+(S.kid||'friend')+'!','Yay, that\'s me!'])); }
+  $('charRow').innerHTML=L.map(function(c){ var lv=levelFor(charRec(world(),c[0]).pearls);
+    return '<button type="button" class="char-chip'+(c[0]===cur?' on':'')+'" data-char="'+c[0]+'" aria-label="'+esc(c[1])+', level '+lv+'">'+axoSVG({char:c[0],plain:true,mood:c[0]===cur?'happy':'neutral'})+'<span class="cc-name">'+esc(c[1])+'</span><span class="cc-lv">Level '+lv+'</span></button>'; }).join(''); }
+function setChar(id){ S[CHAR_KEY[world()]]=id; save(); refreshMascots(); renderChars(); renderLevels(); renderScene(); renderLevelBar(false); $('pearlCount').textContent=SW().pearls; SFX.warm(); SFX.pop(); jump('axoHome'); bubble('homeBubble',pick(['Ready to spell!','Let\'s go, '+(S.kid||'friend')+'!','Yay, that\'s me!'])); }
 function renderHome(){
   $('axoNameHome').textContent=mascotName(); $('playerName').textContent=S.kid||'Player';
   var greet=S.kid?('Hi '+S.kid+'! Ready to spell?'):'Hi! Ready to spell?';
@@ -2167,7 +2188,7 @@ function renderHome(){
   $('roundLen').value=String(S.roundLen);
   renderWorlds(); renderChars(); renderLevels();
 }
-/* world picker: the pick is part of the kid's online save; level and rewards stay the same in every world */
+/* world picker: the pick is part of the kid's online save; each world keeps its own levels for each character */
 var WORLD_PICKS=[['lagoon','Lagoon','linear-gradient(135deg,#CFF0F1,#9BDCE0)'],['candy','Sweetshop','linear-gradient(135deg,#FFF3F8,#FFD3E6)'],['canopy','Rainforest','linear-gradient(135deg,#E4F3D6,#AFDA95)'],['ocean','Ocean','linear-gradient(135deg,#E3E7FF,#B9C3F5)'],['bows','Bow Boutique','linear-gradient(135deg,#FFF0F6,#F8C8DD)'],['boba','Boba Shop','linear-gradient(135deg,#FFF6EC,#F5D9BD)']];
 function renderWorlds(){ var cur=PICKING||savedWorld(), d=defaults(); renderWorldBtn();
   $('worldRow').innerHTML=WORLD_PICKS.map(function(w){ var ch=S[CHAR_KEY[w[0]]]||d[CHAR_KEY[w[0]]];
@@ -2266,7 +2287,7 @@ $('resetNo').addEventListener('click',function(){ $('resetConfirm').hidden=true;
 $('syncRetry').addEventListener('click',function(){ Net.retry(); });
 $('resetYes').addEventListener('click',function(){ var keep={kid:S.kid,charLagoon:S.charLagoon,charCandy:S.charCandy,charCanopy:S.charCanopy,charOcean:S.charOcean,charBows:S.charBows,charBoba:S.charBoba,look:S.look,grade:S.grade,gradePicked:S.gradePicked,roundLen:S.roundLen,sound:S.sound,restoredId:S.restoredId,theme:S.theme,epoch:(S.epoch||0)+1}; S=Object.assign(defaults(),keep); save(); $('resetConfirm').hidden=true; applyWorld(); renderHome(); toast('Progress erased. Fresh start!'); });
 $('roundLen').addEventListener('change',function(){ S.roundLen=$('roundLen').value; save(); });
-$('levelGrid').addEventListener('click',function(e){ var b=e.target.closest('.level-card'); if(!b||b.disabled) return; SW().wearLevel=parseInt(b.getAttribute('data-lv'),10); save(); setOutfit(); renderLevels(); SFX.warm(); SFX.pop(); jump('axoHome'); });
+$('levelGrid').addEventListener('click',function(e){ var b=e.target.closest('.level-card'); if(!b||b.disabled) return; SW(true).wearLevel=parseInt(b.getAttribute('data-lv'),10); save(); setOutfit(); renderLevels(); SFX.warm(); SFX.pop(); jump('axoHome'); });
 $('soundBtn').addEventListener('click',function(){ S.sound=!S.sound; save(); renderSound(); if(S.sound){ SFX.warm(); SFX.pop(); } });
 $('spellForm').addEventListener('submit',function(e){ e.preventDefault(); check(); });
 $('checkBtn').addEventListener('click',function(){ SFX.warm(); check(); });
@@ -2298,11 +2319,11 @@ if(HOVER){
   s.style.cssText='left:'+(Math.random()*100)+'%;width:'+size+'px;height:'+size+'px;--c:'+cols[i%5]+';animation-duration:'+(10+Math.random()*13)+'s;animation-delay:'+(-Math.random()*22)+'s;'; b.appendChild(s); } })();
 
 /* small handle for automated tests */
-window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},world:world,save:save,startRound:startRound,levelFor:levelFor,WORDS3:WORDS3,WORDS4:WORDS4,net:Net,selectProfile:selectProfile,get ONLINE(){return ONLINE;},get LIVE(){return LIVE;}};
+window.__spelling={me:function(k,id){ return k?charRec(k,id||S[CHAR_KEY[k]]||defaults()[CHAR_KEY[k]],true):SW(true); },get G(){return G;},get S(){return S;},get P(){return P;},world:world,save:save,startRound:startRound,levelFor:levelFor,WORDS3:WORDS3,WORDS4:WORDS4,net:Net,selectProfile:selectProfile,get ONLINE(){return ONLINE;},get LIVE(){return LIVE;}};
 /* redraw after the online copy changed under this page */
 function refreshView(){ $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
-var BUILD='2026-09-30.3';
+var BUILD='2026-09-30.4';
 function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
   fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
     if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }
