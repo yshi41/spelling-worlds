@@ -3,8 +3,8 @@
    and every accepted save is also kept in a history table for recovery. */
 import { mergeState, lowersProgress } from './logic.mjs';
 
-const KIDS = ['charlie', 'riley', 'vera', 'cora'];
-const ID_RE = /^(charlie|riley|vera|cora|qa-[a-z0-9-]{1,32})$/;
+const KIDS = ['charlie', 'riley', 'vera', 'cora', 'addie'];
+const ID_RE = /^(charlie|riley|vera|cora|addie|qa-[a-z0-9-]{1,32})$/;
 const MAX_BYTES = 200000;
 const KEEP_HISTORY = 400;
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '86400' };
@@ -23,7 +23,7 @@ export default {
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     const url = new URL(req.url), db = env.DB;
     if (url.pathname === '/saves' && req.method === 'GET') {
-      const { results } = await db.prepare('SELECT player, rev, state FROM saves WHERE player IN (?, ?, ?, ?)').bind(...KIDS).all();
+      const { results } = await db.prepare(`SELECT player, rev, state FROM saves WHERE player IN (${KIDS.map(() => '?').join(', ')})`).bind(...KIDS).all();
       const players = {};
       for (const r of results) players[r.player] = { rev: r.rev, state: JSON.parse(r.state) };
       return json({ players });

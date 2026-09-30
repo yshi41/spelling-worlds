@@ -32,7 +32,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   console.log('1. Player screen');
   ok(await visible('#scr-profiles'), 'player screen shown first');
-  ok(await count('.profile-card') === 4, 'four player cards');
+  ok(await count('.profile-card') === 5, 'five player cards');
   ok((await text('.profile-card[data-id="vera"] .pc-sub')).startsWith('4th grade'), 'Vera defaults to 4th grade');
   ok((await text('.profile-card[data-id="cora"] .pc-sub')).startsWith('4th grade'), 'Cora defaults to 4th grade');
   ok((await text('.profile-card[data-id="charlie"] .pc-sub')).startsWith('4th grade'), 'Charlie defaults to 4th grade');
@@ -478,6 +478,48 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   ok(await dev3.$eval('.profile-card[data-id="cora"] .pc-sub', e => e.textContent) === '4th grade, level 2', 'Cora shows level 2 from it');
   await d3.ctx.close();
   ok(cloud.stats.realHits === 0, 'tests never reached the real save service');
+
+  console.log('12g. Addie, the world picker, and Tile Time');
+  await pickPlayer('addie');
+  ok(await world() === 'bows' && await text('#brand') === 'Spelling Bows' && await count('.char-chip') === 6, 'Addie plays in the bow boutique with six characters');
+  for (const id of ['bow', 'scrunchie', 'clawclip', 'starclip', 'flowerclip', 'bunnyband']) {
+    await page.click('.char-chip[data-char="' + id + '"]'); await sleep(150);
+    ok(await attr('.char-chip.on', 'data-char') === id && await count('#axoHome svg path, #axoHome svg ellipse, #axoHome svg circle, #axoHome svg polygon') > 4, 'bow character draws: ' + id);
+  }
+  await page.click('.char-chip[data-char="bow"]'); await sleep(150);
+  for (const [p, lv] of [[30, 1], [350, 5], [1300, 10]]) {
+    await page.evaluate(p => { __spelling.S.worlds.bows.pearls = p; __spelling.S.worlds.bows.wearLevel = null; __spelling.save(); }, p); await pickPlayer('addie');
+    ok(await text('#lbLevel') === 'Level ' + lv && await count('#scene [data-lv="' + lv + '"].on') > 0 && await count('#axoHome .acc.on') > 0, 'Addie level ' + lv + ': scenery and outfit show');
+  }
+  await page.screenshot({ path: 'addie-10.png' });
+  ok((await online('addie')).worlds.bows.pearls === 1300, 'Addie\'s progress is saved online');
+  const lvA = await text('#lbLevel'), pA = await text('#pearlCount');
+  await page.click('.world-chip[data-look="ocean"]'); await sleep(400);
+  ok(await world() === 'ocean' && await text('#lbLevel') === lvA && await text('#pearlCount') === pA, 'picking the ocean keeps Addie\'s level and rewards');
+  ok(await attr('.world-chip.on', 'data-look') === 'ocean', 'the picked world is highlighted');
+  ok((await online('addie')).look === 'ocean', 'the world pick is saved online');
+  await pickPlayer('addie');
+  ok(await world() === 'ocean' && await text('#lbLevel') === lvA, 'the pick comes back after a reload');
+  await page.click('.world-chip[data-look="bows"]'); await sleep(400);
+  await pickPlayer('charlie'); const lvC = await text('#lbLevel');
+  await page.click('.world-chip[data-look="bows"]'); await sleep(400);
+  ok(await world() === 'bows' && await text('#lbLevel') === lvC, 'Charlie can play in the bow boutique at her own level');
+  await page.screenshot({ path: 'charlie-bows.png' });
+  await page.click('.world-chip[data-look="candy"]'); await sleep(400);
+  ok(await world() === 'candy', 'and go back to the candy world');
+  await pickPlayer('addie');
+  const tileAnswer = word => page.evaluate(word => { const w = __spelling.WORDS3.find(x => x.w === word); __spelling.startRound('tiles', [w]); const G = __spelling.G, used = [];
+    G.tileSel = w.w.split('').map(ch => { const i = G.tileLetters.findIndex((c, j) => c === ch && used.indexOf(j) < 0); used.push(i); return i; });
+    document.getElementById('checkBtn').click(); document.getElementById('quitBtn').click(); }, word);
+  const spellAnswer = word => page.evaluate(word => { const w = __spelling.WORDS3.find(x => x.w === word); __spelling.startRound('spell', [w]); document.getElementById('spellInput').value = w.w; document.getElementById('checkBtn').click(); document.getElementById('quitBtn').click(); }, word);
+  const pT0 = await page.evaluate(() => __spelling.S.worlds.bows.pearls);
+  for (let i = 0; i < 4; i++) { await tileAnswer('bamboo'); await sleep(150); }
+  ok(await page.evaluate(() => { const st = __spelling.S.words.bamboo; return !st.mastered && st.streak === 0 && st.right === 4; }), 'four right in Tile Time do not master a word');
+  ok(await page.evaluate(() => __spelling.S.worlds.bows.pearls) > pT0, 'Tile Time still earns rewards');
+  for (let i = 0; i < 3; i++) { await spellAnswer('bamboo'); await sleep(150); }
+  ok(await page.evaluate(() => __spelling.S.words.bamboo.mastered === true), 'three right in Spell It master it');
+  await page.evaluate(() => { const w = __spelling.WORDS3.find(x => x.w === 'bamboo'); __spelling.startRound('tiles', [w]); __spelling.G.tileSel = [0]; document.getElementById('checkBtn').click(); document.getElementById('quitBtn').click(); });
+  ok(await page.evaluate(() => __spelling.S.words.bamboo.mastered === true && __spelling.S.words.bamboo.streak === 3), 'a Tile Time miss leaves mastery alone');
 
   console.log('13. Errors');
   ok(errors.length === 0, 'no page errors' + (errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''));
