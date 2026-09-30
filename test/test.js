@@ -32,7 +32,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   console.log('1. Player screen');
   ok(await visible('#scr-profiles'), 'player screen shown first');
-  ok(await count('.profile-card') === 5, 'five player cards');
+  ok(await count('.profile-card') === 6, 'six player cards');
   ok((await text('.profile-card[data-id="vera"] .pc-sub')).startsWith('4th grade'), 'Vera defaults to 4th grade');
   ok((await text('.profile-card[data-id="cora"] .pc-sub')).startsWith('4th grade'), 'Cora defaults to 4th grade');
   ok((await text('.profile-card[data-id="charlie"] .pc-sub')).startsWith('4th grade'), 'Charlie defaults to 4th grade');
@@ -520,6 +520,26 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   ok(await page.evaluate(() => __spelling.S.words.bamboo.mastered === true), 'three right in Spell It master it');
   await page.evaluate(() => { const w = __spelling.WORDS3.find(x => x.w === 'bamboo'); __spelling.startRound('tiles', [w]); __spelling.G.tileSel = [0]; document.getElementById('checkBtn').click(); document.getElementById('quitBtn').click(); });
   ok(await page.evaluate(() => __spelling.S.words.bamboo.mastered === true && __spelling.S.words.bamboo.streak === 3), 'a Tile Time miss leaves mastery alone');
+
+  console.log('12h. Amy and the boba shop');
+  await pickPlayer('amy');
+  ok(await world() === 'boba' && await text('#brand') === 'Spelling Boba' && await count('.char-chip') === 6, 'Amy plays in the boba shop with six characters');
+  for (const id of ['milktea', 'taro', 'matcha', 'strawberrytea', 'mangoslush', 'bobapearl']) {
+    await page.click('.char-chip[data-char="' + id + '"]'); await sleep(150);
+    ok(await attr('.char-chip.on', 'data-char') === id && await count('#axoHome svg path, #axoHome svg ellipse, #axoHome svg circle, #axoHome svg rect') > 4, 'boba character draws: ' + id);
+  }
+  await page.click('.char-chip[data-char="milktea"]'); await sleep(150);
+  for (const [p, lv] of [[30, 1], [480, 6], [1300, 10]]) {
+    await page.evaluate(p => { __spelling.S.worlds.boba.pearls = p; __spelling.S.worlds.boba.wearLevel = null; __spelling.save(); }, p); await pickPlayer('amy');
+    ok(await text('#lbLevel') === 'Level ' + lv && await count('#scene [data-lv="' + lv + '"].on') > 0 && await count('#axoHome .acc.on') > 0, 'Amy level ' + lv + ': scenery and outfit show');
+  }
+  await page.screenshot({ path: 'amy-10.png' });
+  ok((await online('amy')).worlds.boba.pearls === 1300, 'Amy\'s progress is saved online');
+  ok(await count('.world-chip') === 6 && await count('.world-chip[data-look="boba"]') === 1, 'the boba shop is in the world picker');
+  await pickPlayer('vera'); const lvV = await text('#lbLevel');
+  await page.click('.world-chip[data-look="boba"]'); await sleep(400);
+  ok(await world() === 'boba' && await text('#lbLevel') === lvV, 'Vera can visit the boba shop at her own level');
+  await page.click('.world-chip[data-look="canopy"]'); await sleep(400);
 
   console.log('13. Errors');
   ok(errors.length === 0, 'no page errors' + (errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''));

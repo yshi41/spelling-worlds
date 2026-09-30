@@ -1,6 +1,6 @@
 # Spelling Worlds
 
-A spelling bee practice game for five players: Charlie, Riley, Vera, Cora, and Addie. Everything lives in one `index.html` file with no build step, so it runs on GitHub Pages or straight from a downloaded copy.
+A spelling bee practice game for six players: Charlie, Riley, Vera, Cora, Addie, and Amy. Everything lives in one `index.html` file with no build step, so it runs on GitHub Pages or straight from a downloaded copy.
 
 ## How it plays
 
@@ -9,7 +9,8 @@ A spelling bee practice game for five players: Charlie, Riley, Vera, Cora, and A
 - **Vera** always plays in the rainforest canopy: sloth and friends, leaves as rewards, with either word list.
 - **Cora** always plays in the jellyfish ocean: jellyfish and friends, bubbles as rewards, with either word list.
 - **Addie** starts in the bow boutique: hair bows, scrunchies, clips, and a headband bunny, with ribbons as rewards.
-- **Pick your world** on the home screen switches any kid to any of the five worlds. Level and rewards stay the same in every world, and the pick is saved online.
+- **Amy** starts in the boba shop: milk tea, taro, matcha, strawberry, mango, and a boba pearl, with boba as rewards.
+- **Pick your world** on the home screen switches any kid to any of the six worlds. Level and rewards stay the same in every world, and the pick is saved online.
 - **Tile Time** earns rewards but never counts toward mastering a word; only Spell It does.
 - Each word is read aloud with a sentence (browser text-to-speech). Type it, or tap letter tiles into order.
 - Misses show a letter-by-letter diff, then the word gets spelled out loud and retyped once to lock it in.

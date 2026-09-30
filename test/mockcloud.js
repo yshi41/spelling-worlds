@@ -2,7 +2,7 @@
    real saves. attach(page) points the page at it and blocks every request to the real service. */
 const MOCK = 'https://cloud.test';
 const REAL = /spelling-worlds-saves\.[a-z0-9-]+\.workers\.dev/;
-const KIDS = ['charlie', 'riley', 'vera', 'cora', 'addie'];
+const KIDS = ['charlie', 'riley', 'vera', 'cora', 'addie', 'amy'];
 const clone = o => JSON.parse(JSON.stringify(o));
 const { mergeState, lowersProgress } = require('../worker/src/logic.mjs');
 function create() {

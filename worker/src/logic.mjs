@@ -1,8 +1,8 @@
 /* merge and safety rules for saves, shared by the Worker and the test stand-in (test/mockcloud.js) */
 /* the game's own merge (index.html mergeState): the save was made from base, the service now holds cur;
    keep both sets of changes. A newer epoch (Reset) wins outright. */
-const WORLD_KEYS = ['lagoon', 'candy', 'canopy', 'ocean', 'bows'];
-const SETTINGS = ['kid', 'grade', 'gradePicked', 'charLagoon', 'charCandy', 'charCanopy', 'charOcean', 'charBows', 'look', 'theme', 'sound', 'roundLen', 'restoredId', '_sid'];
+const WORLD_KEYS = ['lagoon', 'candy', 'canopy', 'ocean', 'bows', 'boba'];
+const SETTINGS = ['kid', 'grade', 'gradePicked', 'charLagoon', 'charCandy', 'charCanopy', 'charOcean', 'charBows', 'charBoba', 'look', 'theme', 'sound', 'roundLen', 'restoredId', '_sid'];
 export function mergeState(mem, disk, base) {
   const me = mem.epoch || 0, de = disk.epoch || 0, be = base.epoch || 0;
   if (me !== be) return mem;

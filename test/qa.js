@@ -61,8 +61,8 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
   ok((await page.title()).indexOf('Spelling Worlds') === 0, 'title is Spelling Worlds: "' + (await page.title()) + '"');
   await page.evaluate(() => document.fonts.ready);
   ok(await page.evaluate(() => [...document.fonts].some(f => /Fredoka/.test(f.family) && f.status === 'loaded')), 'Fredoka web font loaded', await page.evaluate(() => [...document.fonts].map(f => f.family + ':' + f.status).join(' ')));
-  ok(await count('.profile-card') === 5, 'five player cards');
-  ok((await page.$$eval('.profile-card .pc-name', els => els.map(e => e.textContent.trim()).join(','))) === 'Charlie,Riley,Vera,Cora,Addie', 'players in order');
+  ok(await count('.profile-card') === 6, 'six player cards');
+  ok((await page.$$eval('.profile-card .pc-name', els => els.map(e => e.textContent.trim()).join(','))) === 'Charlie,Riley,Vera,Cora,Addie,Amy', 'players in order');
   ok((await text('.profile-card[data-id="cora"] .pc-sub')).startsWith('4th grade'), 'Cora defaults to 4th grade');
   await (async () => { await sleep(600); Object.keys(cloud.store).forEach(k => delete cloud.store[k]); })();
 
