@@ -657,6 +657,64 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
 @keyframes heartup{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(-60px);opacity:0}}
 .level-card .heart,.char-chip .heart,.profile-card .heart{animation:none}
 [data-world="candy"] .pearl-fly{width:9px;height:22px;border-radius:5px;background:var(--accent);box-shadow:0 0 8px rgba(240,70,140,.6)}
+/* world button: one button that opens the world list; a pick previews live and only Save keeps it */
+.world-pick{margin-top:12px}
+.world-btn{display:inline-flex;align-items:center;gap:8px}
+.world-btn .wb-ic{width:24px;height:24px;border-radius:7px;display:inline-block;box-shadow:inset 0 0 0 2px rgba(255,255,255,.7)}
+.world-btn .chev{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;transition:transform .25s}
+.world-btn[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.world-panel{margin-top:10px;padding:12px;border-radius:16px;background:var(--surface-2);border:2px solid var(--line);transform-origin:top center}
+.world-panel:not([hidden]){animation:panelOpen .35s cubic-bezier(.2,1.2,.4,1)}
+@keyframes panelOpen{from{opacity:0;transform:scaleY(.6) translateY(-8px)}}
+.world-panel .hint-text{margin:0 0 10px}
+.wp-actions{margin-top:12px}
+
+/* motion: screens slide in, cards and players pop in one after another */
+.screen:not([hidden]){animation:screenIn .45s cubic-bezier(.2,.9,.3,1.15)}
+@keyframes screenIn{from{opacity:0;transform:translateY(16px) scale(.985)}}
+.home-panel>.card{animation:cardUp .55s cubic-bezier(.2,.9,.3,1.1) both}
+.home-panel>.card:nth-child(2){animation-delay:.08s}.home-panel>.card:nth-child(3){animation-delay:.16s}.home-panel>.card:nth-child(4){animation-delay:.24s}
+@keyframes cardUp{from{opacity:0;transform:translateY(24px)}}
+.profile-card{animation:popIn .55s cubic-bezier(.2,1.5,.4,1) both}
+.profile-card:nth-child(2){animation-delay:.06s}.profile-card:nth-child(3){animation-delay:.12s}.profile-card:nth-child(4){animation-delay:.18s}.profile-card:nth-child(5){animation-delay:.24s}.profile-card:nth-child(6){animation-delay:.3s}
+@keyframes popIn{from{opacity:0;transform:scale(.6) rotate(-4deg)}}
+.profile-card:hover svg,.profile-card:focus-visible svg,.char-chip:hover svg,.world-chip:hover .wc-sw{animation:wiggle .7s ease-in-out}
+@keyframes wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg) scale(1.06)}50%{transform:rotate(7deg) scale(1.08)}75%{transform:rotate(-4deg)}}
+/* a shine sweeps across the play buttons now and then */
+.mode-btn{position:relative;overflow:hidden}
+.mode-btn::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-18deg);animation:shine 5s ease-in-out infinite;pointer-events:none}
+.mode-btn[data-mode="tiles"]::after{animation-delay:1.3s}.mode-btn[data-mode="list"]::after{animation-delay:2.6s}
+@keyframes shine{0%,70%{left:-60%}100%{left:130%}}
+.mode-btn:hover{transform:translateY(-3px)}
+/* a hot streak glows and flickers */
+.stat.hot{animation:hotglow 1.1s ease-in-out infinite alternate}
+.stat.hot svg{animation:flicker .5s ease-in-out infinite alternate}
+@keyframes hotglow{from{box-shadow:0 0 0 0 rgba(255,160,60,0)}to{box-shadow:0 0 14px 4px rgba(255,160,60,.55)}}
+@keyframes flicker{from{transform:scale(1) rotate(-5deg)}to{transform:scale(1.2) rotate(5deg)}}
+/* tap your character: a spin jump and a burst of hearts */
+#axoHome{cursor:pointer}
+.axo-box.spin{animation:spinjump 1s cubic-bezier(.3,1.4,.5,1)}
+@keyframes spinjump{0%{transform:translateY(0) rotate(0)}40%{transform:translateY(-40px) rotate(200deg) scale(1.1)}70%{transform:translateY(0) rotate(360deg) scale(.95,1.05)}100%{transform:rotate(360deg)}}
+.fx-heart{position:fixed;z-index:46;pointer-events:none;font-size:26px;line-height:1;color:var(--c);text-shadow:0 2px 6px rgba(0,0,0,.2);animation:heartfly 1.1s ease-out forwards}
+@keyframes heartfly{0%{transform:translate(-50%,-50%) scale(.3);opacity:0}20%{opacity:1}100%{transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) scale(1.25) rotate(var(--r));opacity:0}}
+/* level up: a shockwave ring */
+.shockwave{position:fixed;left:50%;top:45%;width:40px;height:40px;margin:-20px 0 0 -20px;border-radius:50%;border:6px solid var(--gold-deep);z-index:44;pointer-events:none;animation:shock 1.1s ease-out forwards}
+@keyframes shock{from{transform:scale(.2);opacity:1}to{transform:scale(30);opacity:0;border-width:1px}}
+/* answers and listening */
+.spell-input.ok{animation:okglow .7s ease-out}
+@keyframes okglow{0%{box-shadow:0 0 0 0 rgba(31,156,114,.6)}100%{box-shadow:0 0 0 22px rgba(31,156,114,0)}}
+.spell-input.bump{animation:bump .15s ease-out}
+@keyframes bump{50%{transform:scale(1.025)}}
+#hearBtn.speaking{animation:speakpulse 1s ease-out infinite}
+@keyframes speakpulse{0%{box-shadow:0 5px 0 var(--press),0 0 0 0 rgba(255,255,255,.75)}100%{box-shadow:0 5px 0 var(--press),0 0 0 16px rgba(255,255,255,0)}}
+.level-card:not(.locked){transition:transform .15s}
+.level-card:not(.locked):hover{transform:translateY(-3px) rotate(-1deg)}
+.level-card.mystery .lc-q{animation:qbob 1.6s ease-in-out infinite}
+@keyframes qbob{50%{transform:translateY(-5px) rotate(8deg)}}
+/* saving a new world opens it with a circle wipe from the world button */
+::view-transition-old(root){animation:none}
+::view-transition-new(root){animation:worldReveal .9s cubic-bezier(.6,0,.2,1)}
+@keyframes worldReveal{from{clip-path:circle(0px at var(--vx,50%) var(--vy,50%))}to{clip-path:circle(160vmax at var(--vx,50%) var(--vy,50%))}}
 </style>
 <div class="scene" id="scene" aria-hidden="true"></div>
 <div class="bubbles" id="bubbles" aria-hidden="true"></div>
@@ -715,6 +773,14 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
           <div class="player-line"><span>Playing as <b id="playerName">Charlie</b></span><button class="btn btn-ghost btn-sm" id="switchBtn" type="button">Switch player</button><span class="sync-note" id="syncHome" aria-live="polite" hidden></span></div>
           <h1 class="title" id="homeTitle">Spelling Lagoon</h1>
           <div class="list-badge home-badge" data-g="3"></div>
+          <div class="world-pick">
+            <button class="btn btn-ghost btn-sm world-btn" id="worldBtn" type="button" aria-expanded="false" aria-controls="worldPanel"><span class="wb-ic" id="worldBtnIc"></span><span id="worldBtnName">World</span><svg class="chev" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 6l5 5 5-5"/></svg></button>
+            <div class="world-panel" id="worldPanel" hidden>
+              <p class="hint-text">Pick a world to try it. Your level and rewards come with you.</p>
+              <div class="world-row" id="worldRow"></div>
+              <div class="row wp-actions"><button class="btn btn-good btn-sm" id="worldSave" type="button" disabled>Save world</button><button class="btn btn-ghost btn-sm" id="worldCancel" type="button">Cancel</button></div>
+            </div>
+          </div>
           <p class="sub" id="homeSub">The 50 third-grade bee words. Hear it, spell it, earn pearls, level up your character and the lagoon.</p>
           <div class="grade-row"><span class="glbl">Word list</span>
             <div class="seg" id="gradeSeg" role="group" aria-label="Word list"><button type="button" class="seg-btn on" data-g="3">3rd grade</button><button type="button" class="seg-btn" data-g="4">4th grade</button></div>
@@ -725,11 +791,6 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
             <button class="mode-btn" type="button" data-mode="list"><span class="mode-name">Word List</span><span class="mode-desc">See, hear, and check every word.</span></button>
           </div>
           <div class="progress-line"><span>Mastered <b id="masteredCount">0</b> of <b id="totalCount">50</b> <span id="gradeLabel">3rd grade</span> words</span><div class="bar"><i id="masteredBar"></i></div></div>
-        </div>
-        <div class="card">
-          <h3>Pick your world</h3>
-          <p class="hint-text">Your level and rewards come with you to every world.</p>
-          <div class="world-row" id="worldRow"></div>
         </div>
         <div class="card">
           <h3>Pick your character</h3>
@@ -1862,6 +1923,14 @@ function bobaPieces(p){
   for(j=0;j<9;j++){ b=(200+j*17.5)*Math.PI/180; halo+=svgDot(Math.round(130+Math.cos(b)*122),Math.round(120+Math.sin(b)*122),6,RAINBOW[j%6],'#fff'); }
   return {capePath:cape, glow:glow, behind:behind, front:hats+neck+eyes+sh+wand+piece(10,'halo','halo1',halo)+piece(9,'aura','aura',aura)};
 }
+/* extra effects: hearts from a tapped character, a level-up shockwave, a pulse on Hear it while a word is read */
+function burstHearts(el){ var r=el.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2, cols=W().confetti;
+  for(var i=0;i<10;i++){ (function(i){ var h=document.createElement('span'); h.className='fx-heart'; h.textContent=i%3?'♥':'✦';
+    var a=Math.PI*2*i/10+Math.random()*0.4, d=70+Math.random()*60;
+    h.style.cssText='left:'+cx+'px;top:'+cy+'px;--c:'+cols[i%cols.length]+';--x:'+Math.round(Math.cos(a)*d)+'px;--y:'+Math.round(Math.sin(a)*d-30)+'px;--r:'+Math.round((Math.random()-0.5)*80)+'deg;animation-delay:'+(i*25)+'ms';
+    document.body.appendChild(h); setTimeout(function(){ h.remove(); },1400); })(i); } }
+function shockwave(){ for(var i=0;i<2;i++){ (function(i){ setTimeout(function(){ var s=document.createElement('div'); s.className='shockwave'; document.body.appendChild(s); setTimeout(function(){ s.remove(); },1200); },i*220); })(i); } }
+function speakPulse(){ var b=$('hearBtn'); b.classList.add('speaking'); clearTimeout(G.spT); G.spT=setTimeout(function(){ b.classList.remove('speaking'); },2600); }
 function setMood(m){ var a=document.querySelectorAll('.axo-box .axo'); for(var i=0;i<a.length;i++) a[i].setAttribute('data-mood',m); }
 function replay(id,cls){ var b=$(id); b.classList.remove('jump','shake'); void b.offsetWidth; b.classList.add(cls); }
 function jump(id){ replay(id,'jump'); }
@@ -1901,7 +1970,7 @@ function addPearls(n,fromEl,lvBefore){
   setTimeout(function(){ if(P.current!==who) return; countTo($('pearlCount'),before,after,600); renderLevelBar(false); },500);
   var L0=(lvBefore!=null?lvBefore:levelFor(before)), L1=levelFor(SW().pearls);
   if(L1>L0){ SW().wearLevel=null;
-    setTimeout(function(){ if(P.current!==who||levels()!==lv0) return; setOutfit(); renderScene(); renderLevelBar(true); SFX.unlock(); sceneParty(5000); bigConfetti();
+    setTimeout(function(){ if(P.current!==who||levels()!==lv0) return; setOutfit(); renderScene(); renderLevelBar(true); SFX.unlock(); sceneParty(5000); bigConfetti(); shockwave();
       for(var l=L0+1;l<=L1;l++){ var L=lv0[l-1]; Banners.push({kind:'unlock',title:'Level '+l+'!',sub:'New: '+L.o+', plus '+L.l+' '+where,svg:axoSVG({mood:'happy'}),level:l,ms:3200}); }
     },1300); }
   save();
@@ -1909,7 +1978,7 @@ function addPearls(n,fromEl,lvBefore){
 
 /* the round */
 var G={screen:'scr-home',mode:'spell',queue:[],idx:0,cur:null,phase:'answer',hinted:0,retry:[],stats:null,streak:0,timer:null,tileLetters:[],tileSel:[]};
-function show(id){ ['scr-profiles','scr-home','scr-play','scr-words','scr-summary'].forEach(function(s){ $(s).hidden=(s!==id); }); G.screen=id; $('app').setAttribute('data-screen',id); $('main').scrollTop=0; }
+function show(id){ if(PICKING&&id!=='scr-home') endPick(); ['scr-profiles','scr-home','scr-play','scr-words','scr-summary'].forEach(function(s){ $(s).hidden=(s!==id); }); G.screen=id; $('app').setAttribute('data-screen',id); $('main').scrollTop=0; }
 function poolWords(){ return activeWords().slice(); }
 function buildQueue(only){
   var p=(only?only.slice():poolWords()).map(function(w){ var st=wstat(w.w); return {w:w,k:st.streak*3-st.wrong*2-(st.seen===0?2:0)+Math.random()*4}; });
@@ -1943,7 +2012,7 @@ function nextWord(){
   var inp=$('spellInput'); inp.value=''; inp.readOnly=false; inp.placeholder='type the word'; inp.className='spell-input';
   if(G.mode==='tiles'){ setupTiles(G.cur.w); if(isPhone()) setTimeout(function(){ try{ $('checkBtn').scrollIntoView({block:'end'}); }catch(e){} },60); } else { refocus(); if(isPhone()) setTimeout(function(){ try{ $('spellInput').scrollIntoView({block:'center'}); }catch(e){} },60); }
   if(!Voice.ok){ showInfo('<b>Meaning:</b> '+esc(G.cur.d)); }
-  G.vtimer=setTimeout(function(){ if(G.cur&&G.screen==='scr-play') Voice.full(G.cur); },450);
+  G.vtimer=setTimeout(function(){ if(G.cur&&G.screen==='scr-play'){ Voice.full(G.cur); speakPulse(); } },450);
 }
 function refocus(){ if(G.mode!=='tiles'&&G.phase!=='done'){ try{ $('spellInput').focus({preventScroll:true}); }catch(e){} } }
 function showInfo(html){ $('infoBox').innerHTML=html; $('infoBox').hidden=false; }
@@ -2056,7 +2125,7 @@ function endRound(){
   $('sumStats').innerHTML='<div class="sum-stat"><b>'+st.first+' of '+n+'</b><span>Right first try</span></div><div class="sum-stat"><b>+'+st.pearls+'</b><span>'+W().cur.charAt(0).toUpperCase()+W().cur.slice(1)+' earned</span></div><div class="sum-stat"><b>'+st.best+'</b><span>Best streak</span></div>';
   $('missedWrap').hidden=!st.missed.length; $('practiceMissed').hidden=!st.missed.length;
   $('missedList').innerHTML=st.missed.map(function(w){return '<span class="mw">'+esc(w.w)+'</span>';}).join('');
-  SFX.fanfare(); bigConfetti(); save();
+  SFX.fanfare(); bigConfetti(); if(k===3) setTimeout(bigConfetti,900); save();
   var sv=W().sumVoice[3-k]; setTimeout(function(){ if(G.screen==='scr-summary') Voice.say(sv,0.95); },400);
 }
 /* phones: keep the app inside the visible area when the keyboard is open, and keep feedback in view */
@@ -2100,10 +2169,29 @@ function renderHome(){
 }
 /* world picker: the pick is part of the kid's online save; level and rewards stay the same in every world */
 var WORLD_PICKS=[['lagoon','Lagoon','linear-gradient(135deg,#CFF0F1,#9BDCE0)'],['candy','Sweetshop','linear-gradient(135deg,#FFF3F8,#FFD3E6)'],['canopy','Rainforest','linear-gradient(135deg,#E4F3D6,#AFDA95)'],['ocean','Ocean','linear-gradient(135deg,#E3E7FF,#B9C3F5)'],['bows','Bow Boutique','linear-gradient(135deg,#FFF0F6,#F8C8DD)'],['boba','Boba Shop','linear-gradient(135deg,#FFF6EC,#F5D9BD)']];
-function renderWorlds(){ var cur=world(), d=defaults();
+function renderWorlds(){ var cur=PICKING||savedWorld(), d=defaults(); renderWorldBtn();
   $('worldRow').innerHTML=WORLD_PICKS.map(function(w){ var ch=S[CHAR_KEY[w[0]]]||d[CHAR_KEY[w[0]]];
     return '<button type="button" class="world-chip'+(w[0]===cur?' on':'')+'" data-look="'+w[0]+'" aria-pressed="'+(w[0]===cur)+'"><span class="wc-sw" style="background:'+w[2]+'">'+axoSVG({char:ch,plain:true,mood:'happy'})+'</span><span class="wc-name">'+esc(w[1])+'</span></button>'; }).join(''); }
-function setLook(k){ if(!WORLDS[k]||k===world()) return; S.look=k; save(); applyWorld(); renderHome(); SFX.warm(); SFX.pop(); jump('axoHome'); toast(W().brand+'!'); }
+/* the world a kid has saved (not a world being tried in the picker) */
+function savedWorld(){ return (S.look&&WORLDS[S.look]?S.look:null)||S.theme||(S.grade==='4'?'candy':'lagoon'); }
+function worldPick(k){ for(var i=0;i<WORLD_PICKS.length;i++){ if(WORLD_PICKS[i][0]===k) return WORLD_PICKS[i]; } return WORLD_PICKS[0]; }
+function renderWorldBtn(){ var w=worldPick(savedWorld()); $('worldBtnName').textContent='World: '+w[1]; $('worldBtnIc').style.background=w[2]; }
+/* PICKING: the world being tried while the list is open; it shows on screen but is not saved until Save */
+var PICKING=null;
+function openWorldPicker(){ PICKING=savedWorld(); $('worldPanel').hidden=false; $('worldBtn').setAttribute('aria-expanded','true'); $('worldSave').disabled=true; renderWorlds(); }
+function tryWorld(k){ if(!PICKING||!WORLDS[k]) return; PICKING=k; PREVIEW=(k===savedWorld())?null:k; applyWorld(); renderHome(); $('worldSave').disabled=(k===savedWorld()); SFX.warm(); SFX.pop(); }
+function endPick(){ PICKING=null; PREVIEW=null; $('worldPanel').hidden=true; $('worldBtn').setAttribute('aria-expanded','false'); applyWorld(); }
+function closeWorldPicker(){ endPick(); renderHome(); }
+function saveWorld(){ var k=PICKING; if(!k||k===savedWorld()) return;
+  PICKING=null; $('worldPanel').hidden=true; $('worldBtn').setAttribute('aria-expanded','false');
+  worldTransition(function(){ PREVIEW=null; S.look=k; save(); applyWorld(); renderHome(); });
+  SFX.warm(); SFX.unlock(); bigConfetti(); jump('axoHome'); toast(W().brand+' saved!'); }
+/* a circle wipe from the world button where the browser supports it */
+function worldTransition(fn){ var r=$('worldBtn').getBoundingClientRect(), d=document.documentElement, reduce=false;
+  d.style.setProperty('--vx',Math.round(r.left+r.width/2)+'px'); d.style.setProperty('--vy',Math.round(r.top+r.height/2)+'px');
+  try{ reduce=matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+  if(document.startViewTransition&&!reduce){ try{ document.startViewTransition(fn); return; }catch(e){} }
+  fn(); sceneFlash(); }
 function renderProfiles(){ var keepS=S, keepK=K_INK, html='';
   PLAYERS.forEach(function(p){ S=playerState(p.id); K_INK=WORLDS[world()].ink; var lv=levelFor(SW().pearls);
     html+='<button type="button" class="profile-card'+(p.id===(P.current||P.last)?' on':'')+'" data-id="'+p.id+'"'+(LOADED?'':' disabled')+'>'+axoSVG({plain:true,mood:'happy'})+'<span class="pc-name">'+esc(p.name)+'</span><span class="pc-sub">'+(LOADED?'Level '+lv:'Loading...')+'</span></button>'; });
@@ -2164,7 +2252,12 @@ function goHome(){ clearTimeout(G.timer); clearTimeout(G.vtimer); clearTimeout(G
 var modes=document.querySelectorAll('.mode-btn');
 for(var mi=0;mi<modes.length;mi++){ modes[mi].addEventListener('click',function(){ SFX.warm(); Voice.warm(); var m=this.getAttribute('data-mode'); if(m==='list'){ renderWords(); show('scr-words'); } else { startRound(m); } }); }
 document.addEventListener('click',function(e){ var b=e.target.closest('.seg-btn'); if(b) setGrade(b.getAttribute('data-g')); });
-$('worldRow').addEventListener('click',function(e){ var b=e.target.closest('.world-chip'); if(b) setLook(b.getAttribute('data-look')); });
+$('worldRow').addEventListener('click',function(e){ var b=e.target.closest('.world-chip'); if(b) tryWorld(b.getAttribute('data-look')); });
+$('worldBtn').addEventListener('click',function(){ SFX.warm(); if(PICKING) closeWorldPicker(); else openWorldPicker(); });
+$('worldSave').addEventListener('click',saveWorld);
+$('worldCancel').addEventListener('click',function(){ closeWorldPicker(); SFX.tick(); });
+$('axoHome').addEventListener('click',function(){ replay('axoHome','spin'); burstHearts($('axoHome')); SFX.warm(); SFX.pop(); bubble('homeBubble',pick(W().praise)); });
+$('spellInput').addEventListener('input',function(){ var i=$('spellInput'); i.classList.remove('bump'); void i.offsetWidth; i.classList.add('bump'); });
 $('charRow').addEventListener('click',function(e){ var b=e.target.closest('.char-chip'); if(b) setChar(b.getAttribute('data-char')); });
 $('switchBtn').addEventListener('click',function(){ SFX.warm(); showProfiles(); });
 $('profileGrid').addEventListener('click',function(e){ var b=e.target.closest('.profile-card'); if(!b) return; SFX.warm(); Voice.warm(); selectProfile(b.getAttribute('data-id')); SFX.pop(); jump('axoHome'); toast('Hi, '+S.kid+'!'); });
@@ -2177,7 +2270,7 @@ $('levelGrid').addEventListener('click',function(e){ var b=e.target.closest('.le
 $('soundBtn').addEventListener('click',function(){ S.sound=!S.sound; save(); renderSound(); if(S.sound){ SFX.warm(); SFX.pop(); } });
 $('spellForm').addEventListener('submit',function(e){ e.preventDefault(); check(); });
 $('checkBtn').addEventListener('click',function(){ SFX.warm(); check(); });
-$('hearBtn').addEventListener('click',function(){ if(G.cur){ Voice.full(G.cur); bubble('playBubble','Listen...'); refocus(); } });
+$('hearBtn').addEventListener('click',function(){ if(G.cur){ Voice.full(G.cur); speakPulse(); bubble('playBubble','Listen...'); refocus(); } });
 $('sentBtn').addEventListener('click',function(){ if(!G.cur) return; Voice.sentence(G.cur); showInfo('<b>Sentence:</b> '+esc(G.cur.s.replace(new RegExp(G.cur.w,'ig'),'____'))); refocus(); });
 $('meanBtn').addEventListener('click',function(){ if(!G.cur) return; Voice.meaning(G.cur); showInfo('<b>Meaning:</b> '+esc(G.cur.d)); refocus(); });
 $('hintBtn').addEventListener('click',hint);
@@ -2209,7 +2302,7 @@ window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},worl
 /* redraw after the online copy changed under this page */
 function refreshView(){ $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
-var BUILD='2026-09-30.2';
+var BUILD='2026-09-30.3';
 function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
   fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
     if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }

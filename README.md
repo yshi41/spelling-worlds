@@ -10,7 +10,7 @@ A spelling bee practice game for six players: Charlie, Riley, Vera, Cora, Addie,
 - **Cora** always plays in the jellyfish ocean: jellyfish and friends, bubbles as rewards, with either word list.
 - **Addie** starts in the bow boutique: hair bows, scrunchies, clips, and a headband bunny, with ribbons as rewards.
 - **Amy** starts in the boba shop: milk tea, taro, matcha, strawberry, mango, and a boba pearl, with boba as rewards.
-- **Pick your world** on the home screen switches any kid to any of the six worlds. Level and rewards stay the same in every world, and the pick is saved online.
+- **World button** on the home screen opens the list of six worlds; tapping one previews it, and **Save world** keeps it (saved online). Level and rewards stay the same in every world. Level and rewards stay the same in every world, and the pick is saved online.
 - **Tile Time** earns rewards but never counts toward mastering a word; only Spell It does.
 - A big badge on every screen shows which word list is in use: blue for 3rd grade words, purple for 4th grade words.
 - Each word is read aloud with a sentence (browser text-to-speech). Type it, or tap letter tiles into order.
