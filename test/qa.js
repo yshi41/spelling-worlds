@@ -51,7 +51,7 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
   const count = async (sel) => (await page.$$(sel)).length;
   const world = () => page.evaluate(() => document.documentElement.getAttribute('data-world'));
   const click = sel => page.$eval(sel, el => el.click());
-  const pearls = () => page.evaluate(() => __spelling.S.worlds[__spelling.world()].pearls);
+  const pearls = () => page.evaluate(() => __spelling.SW().pearls);
   const goCora = async () => { await page.goto(URL, { waitUntil: 'load' }); await sleep(350); await click('.profile-card[data-id="cora"]'); await sleep(450); };
   const probe = async (tag) => { const r = await page.evaluate(PROBE); const bad = r.overflow || r.wide.length || r.clipped.length; ok(!bad, tag + ' fits the screen', (r.overflow ? 'PAGE SCROLLS SIDEWAYS ' : '') + (r.wide.length ? 'off-screen: ' + r.wide.join(', ') + ' ' : '') + (r.clipped.length ? 'clipped: ' + r.clipped.join(', ') : '')); if (r.small.length) warn(tag + ' small taps: ' + r.small.join(', ')); };
 
@@ -72,21 +72,21 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
   ok(await text('#lbLevel') === 'Level 0' && await count('#axoHome .acc.on') === 0, 'level 0: no outfit yet');
   for (let i = 0; i < THRESH.length; i++) {
     const lv = i + 1;
-    await page.evaluate((p) => { __spelling.S.worlds.ocean.pearls = p; __spelling.S.epoch = (__spelling.S.epoch || 0) + 1; __spelling.save(); }, THRESH[i]);
+    await page.evaluate((p) => { __spelling.SW().pearls = p; __spelling.S.epoch = (__spelling.S.epoch || 0) + 1; __spelling.save(); }, THRESH[i]);
     await goCora();
     const lvl = await text('#lbLevel'), scene = await count('#scene [data-lv="' + lv + '"].on'), piece = await count('#axoHome .acc.on[data-lv="' + lv + '"]');
     const card = await page.$eval('.level-card[data-lv="' + lv + '"]', el => ({ disabled: el.disabled, txt: el.textContent }));
     ok(lvl === 'Level ' + lv && scene > 0 && piece > 0 && !card.disabled && card.txt.indexOf(OUTFITS[i]) >= 0, 'level ' + lv + ': ' + OUTFITS[i] + ' worn, scenery on, card unlocked', lvl + ' scene=' + scene + ' piece=' + piece + ' card=' + (card.disabled ? 'locked' : 'open'));
-    ok(await page.evaluate(() => __spelling.levelFor(__spelling.S.worlds.ocean.pearls + 0) === __spelling.levelFor(__spelling.S.worlds.ocean.pearls)), 'levelFor is stable');
+    ok(await page.evaluate(() => __spelling.levelFor(__spelling.SW().pearls + 0) === __spelling.levelFor(__spelling.SW().pearls)), 'levelFor is stable');
   }
   ok(await count('.level-card[data-lv="11"]') === 0 && /Level 11/.test(await text('.level-card.mystery')) && /1500 bubbles \+ 10 mastered/.test(await text('.level-card.mystery')), 'level 11 stays a Surprise card asking for 1500 bubbles + 10 mastered', await text('.level-card.mystery'));
-  await page.evaluate(() => { __spelling.S.worlds.ocean.pearls = 3300; __spelling.WORDS4.forEach(w => { __spelling.S.words[w.w] = { mastered: true, streak: 3, right: 3, wrong: 0, seen: 3 }; }); __spelling.S.epoch = (__spelling.S.epoch || 0) + 1; __spelling.save(); });
+  await page.evaluate(() => { __spelling.SW().pearls = 3300; __spelling.WORDS4.forEach(w => { __spelling.S.words[w.w] = { mastered: true, streak: 3, right: 3, wrong: 0, seen: 3 }; }); __spelling.S.epoch = (__spelling.S.epoch || 0) + 1; __spelling.save(); });
   await goCora();
   ok(await text('#lbLevel') === 'Level 20' && await count('#scene [data-lv="20"].on') > 0 && await count('#axoHome .acc.on[data-lv="20"]') > 0, 'level 20 with all 50 mastered: trophy and celebration');
   await page.screenshot({ path: 'qa-cora-lv20.png' });
   await page.$eval('#levelGrid', el => el.scrollIntoView({ block: 'start' })); await sleep(200);
   const grid = await page.$('#levelGrid'); await grid.screenshot({ path: 'qa-cora-levels.png' });
-  await page.evaluate(() => { __spelling.S.worlds.ocean.pearls = 1400; __spelling.S.words = {}; __spelling.S.epoch = (__spelling.S.epoch || 0) + 1; __spelling.save(); });
+  await page.evaluate(() => { __spelling.SW().pearls = 1400; __spelling.S.words = {}; __spelling.S.epoch = (__spelling.S.epoch || 0) + 1; __spelling.save(); });
   await goCora();
   for (const c of CHARS) {
     await click('.char-chip[data-char="' + c + '"]'); await sleep(150);
@@ -98,11 +98,11 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
   await click('.char-chip[data-char="jellyfish"]'); await sleep(150);
 
   console.log('C. Two tabs never overwrite Cora');
-  await page.evaluate(() => { __spelling.S.worlds.ocean.pearls = 500; __spelling.S.epoch = (__spelling.S.epoch || 0) + 1; __spelling.save(); });
+  await page.evaluate(() => { __spelling.SW().pearls = 500; __spelling.S.epoch = (__spelling.S.epoch || 0) + 1; __spelling.save(); });
   await goCora();
   const pageB = await browser.newPage(); await cloud.attach(pageB); await pageB.goto(URL, { waitUntil: 'load' }); await sleep(350); await pageB.$eval('.profile-card[data-id="cora"]', el => el.click()); await sleep(450);
-  await page.evaluate(() => { __spelling.S.worlds.ocean.pearls += 100; __spelling.save(); });
-  await pageB.evaluate(() => { __spelling.S.worlds.ocean.pearls += 10; __spelling.save(); });
+  await page.evaluate(() => { __spelling.SW().pearls += 100; __spelling.save(); });
+  await pageB.evaluate(() => { __spelling.SW().pearls += 10; __spelling.save(); });
   await page.reload({ waitUntil: 'load' }); await sleep(350); await click('.profile-card[data-id="cora"]'); await sleep(450);
   ok(await pearls() === 610, 'both tabs\' bubbles kept (610)', 'got ' + await pearls());
   await pageB.close(); await sleep(600);
@@ -146,7 +146,7 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
       await probe(tag + ' cora summary');
       if (w === 390) await page.screenshot({ path: 'qa-390-cora-summary.png' });
       await click('#sumHome'); await sleep(250);
-      await page.evaluate(() => { __spelling.S.worlds.ocean.pearls = 1400; __spelling.S.epoch = (__spelling.S.epoch || 0) + 1; __spelling.save(); });
+      await page.evaluate(() => { __spelling.SW().pearls = 1400; __spelling.S.epoch = (__spelling.S.epoch || 0) + 1; __spelling.save(); });
       await page.reload({ waitUntil: 'load' }); await sleep(350); await click('.profile-card[data-id="cora"]'); await sleep(500);
       await probe(tag + ' cora home at level 10');
       if (w === 390) await page.screenshot({ path: 'qa-390-cora-lv10.png' });

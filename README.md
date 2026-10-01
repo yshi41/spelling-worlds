@@ -10,16 +10,19 @@ A spelling bee practice game for six players: Charlie, Riley, Vera, Cora, Addie,
 - **Cora** always plays in the jellyfish ocean: jellyfish and friends, bubbles as rewards, with either word list.
 - **Addie** starts in the bow boutique: hair bows, scrunchies, clips, and a headband bunny, with ribbons as rewards.
 - **Amy** starts in the boba shop: milk tea, taro, matcha, strawberry, mango, and a boba pearl, with boba as rewards.
-- **World button** on the home screen opens the list of six worlds; tapping one previews it, and **Save world** keeps it (saved online). Level and rewards stay the same in every world. Level and rewards stay the same in every world, and the pick is saved online.
+- **World button** on the home screen opens the list of six worlds; tapping one previews it, and **Save world** keeps it (saved online).
+- **Every character has its own level.** Each of the 36 characters keeps its own rewards and level, starting at level 0, so picking a new character starts that one from scratch and going back finds the old one right where it was. The character chips show each one's level, and MAX once it reaches the top level.
 - **Tile Time** earns rewards but never counts toward mastering a word; only Spell It does.
 - A big badge on every screen shows which word list is in use: blue for 3rd grade words, purple for 4th grade words.
 - Each word is read aloud with a sentence (browser text-to-speech). Type it, or tap letter tiles into order.
 - Misses show a letter-by-letter diff, then the word gets spelled out loud and retyped once to lock it in.
-- Correct answers earn rewards; streaks earn bonuses; every level adds an outfit piece to the character and something new to the scene.
+- Correct answers earn rewards for the character being played; streaks earn bonuses; every level adds an outfit piece to the character and something new to the scene.
 
 ## Saving
 
 Progress lives only online. Nothing about levels or rewards is stored in the browser: the game loads every player's save from the save service when it opens, and sends each change within a moment. The home screen says **Saved online** once a change has landed. If the service can't be reached, the player screen waits with a **Try again** button, and during play a note says progress is not saved until it reconnects.
+
+A player's save holds one record per character (`chars["world:character"]`). Saves made before that are read once into the new shape: each world's rewards go to the character picked in that world, and the player's own world's rewards go to the character they were playing, so nobody loses a level. `migrateChars` in `index.html` and `worker/src/logic.mjs` must stay in step.
 
 The save service is a small Cloudflare Worker in `worker/` (`https://spelling-worlds-saves.yshi41.workers.dev`) backed by a D1 database with one row per player, plus a history of every save for recovery. A save only lands if it names the version it started from; when another device saved first, the game merges the two copies and sends again. The service refuses any save that lowers rewards unless it comes from **Reset this player's progress**.
 
@@ -35,7 +38,7 @@ The 3rd and 4th grade lists are the Scripps School Spelling Bee study words for 
 
 ## Testing
 
-`test/test.js` drives the game in headless Chrome against an in-memory stand-in for the save service (`test/mockcloud.js`), so tests never touch the real saves. It checks online saving across two devices, offline play, lost replies, and resets, plus the player screen, hover previews, both worlds, spelling and tile rounds, misses and lock-in, hints, level-ups, the word list, persistence across player switches and reloads, reset, and phone-width layout.
+`test/test.js` drives the game in headless Chrome against an in-memory stand-in for the save service (`test/mockcloud.js`), so tests never touch the real saves. It checks online saving across two devices, offline play, lost replies, and resets, plus the player screen, hover previews, both worlds, spelling and tile rounds, misses and lock-in, hints, level-ups, each character keeping its own level, the word list, persistence across player switches and reloads, reset, and phone-width layout.
 
 ```
 cd test
