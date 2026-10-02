@@ -449,6 +449,11 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 .heard .tile.dim{opacity:.45;border-style:dashed;box-shadow:none}
 .heard .hd-empty{color:var(--ink-soft);font-weight:600;font-size:.95rem;text-align:center}
 .say-hint{margin:0;text-align:center}
+.say-or{display:flex;align-items:center;gap:10px;width:100%;max-width:440px;color:var(--ink-soft);font-weight:700;font-size:.9rem;text-align:center}
+.say-or::before,.say-or::after{content:"";flex:1;border-top:2px dashed var(--line)}
+.say-input{font-family:var(--display),sans-serif;font-weight:600;font-size:1.3rem;letter-spacing:.04em;text-align:center;width:100%;max-width:440px;border:3px solid var(--line);border-radius:16px;padding:10px 12px;background:var(--surface-2);color:var(--ink)}
+.say-input:focus{border-color:var(--sky);outline:none}
+@media (max-width:720px){ .say-input{font-size:1.1rem;padding:8px 10px} }
 
 /* word list */
 .words-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
@@ -867,8 +872,11 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
         <div id="sayArea" class="say-area" hidden>
           <button class="btn btn-sky btn-big mic-btn" id="micBtn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v5a4 4 0 0 0 4 4zm6-4a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.93V22h2v-3.07A8 8 0 0 0 20 11h-2z"/></svg><span id="micLabel">Tap, then spell it out loud</span></button>
           <div class="tile-row heard" id="heard"><span class="hd-empty">The letters you say will show up here.</span></div>
-          <p class="hint-text say-hint">Say one letter at a time, with a little pause: "B... A... M..."</p>
+          <p class="hint-text say-hint" id="sayHint">Say one letter at a time, with a little pause: "B... A... M..."</p>
           <div class="notice" id="micNotice" hidden></div>
+          <div class="say-or"><span id="sayOrTxt">or use your device's voice typing</span></div>
+          <input class="say-input" id="sayInput" type="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" placeholder="tap here, then talk" aria-label="Spell it with your device's voice typing">
+          <p class="hint-text say-hint" id="kbHint"></p>
         </div>
         <div class="action-row">
           <button class="btn btn-ghost" id="clearBtn" type="button" hidden>Clear</button>
@@ -2020,61 +2028,108 @@ function addPearls(n,fromEl,lvBefore){
   save();
 }
 
-/* say it: the kid spells the word out loud and the browser's speech recognition hears the letters */
+/* say it: the kid spells the word out loud, heard by the device's own speech recognition, two ways:
+   the mic button uses the browser's recognizer (Google in Chrome and Android, Apple in Safari, Microsoft in Edge),
+   and the box takes the keyboard's voice typing (the mic key on a phone keyboard, Windows + H, Fn twice on a Mac).
+   Recognizers write spelled letters many ways ("bee", "B-A-M", "BAMBOO", "you" for U), so every reading of what was
+   heard is weighed against the word, across the recognizer's top guesses, and the closest one is used. */
 var Say=(function(){
-  var rec=null, gen=0, on=false, want=false, base=[], fin=[], tmp=[], heardWord=false, restarts=0, ctimer=null;
-  var NAMES={a:'a',ay:'a',b:'b',be:'b',bee:'b',c:'c',cee:'c',see:'c',sea:'c',si:'c',d:'d',de:'d',dee:'d',e:'e',ee:'e',f:'f',ef:'f',eff:'f',g:'g',ge:'g',gee:'g',h:'h',aitch:'h',ach:'h',i:'i',eye:'i',aye:'i',j:'j',jay:'j',k:'k',kay:'k',l:'l',el:'l',ell:'l',elle:'l',m:'m',em:'m',n:'n',en:'n',o:'o',oh:'o',owe:'o',p:'p',pe:'p',pee:'p',pea:'p',q:'q',cue:'q',queue:'q',kew:'q',que:'q',r:'r',ar:'r',are:'r',s:'s',es:'s',ess:'s',t:'t',te:'t',tee:'t',tea:'t',u:'u',you:'u',yu:'u',ewe:'u',v:'v',ve:'v',vee:'v',w:'w',x:'x',ex:'x',eks:'x',y:'y',why:'y',wye:'y',z:'z',ze:'z',zee:'z',zed:'z'};
+  var rec=null, gen=0, on=false, want=false, restarts=0, ctimer=null, src='mic', heardWord=false;
+  var UA=navigator.userAgent||'', ANDROID=/Android/i.test(UA);
+  var base=null, segF=[], segI=[], beamF=null, beamAll=null, shownSolid=0;
+  var NAMES={}, FILLER={}, BEAM=24;
+  ('a:a ay eh hey|b:b be bee bea|c:c cee see sea si|d:d de dee di|e:e ee he|f:f ef eff if|g:g ge gee jee ji|h:h aitch ach age|i:i eye aye ai|j:j jay jae jai|k:k kay cay okay ok kei|l:l el ell elle al|m:m em um hm hmm|n:n en and in an|o:o oh owe|p:p pe pee pea|q:q cue queue kew que cu kyu|r:r ar are our|s:s es ess yes|t:t te tee tea ti|u:u you yu ewe|v:v ve vee vi|w:w|x:x ex eks|y:y why wye wi|z:z ze zee zed')
+    .split('|').forEach(function(g){ var p=g.split(':'); p[1].split(' ').forEach(function(n){ NAMES[n]=p[0]; }); });
+  'um uh er erm hmm hm the and then next capital letter uppercase lowercase big small okay ok so like is it spell spelled space dash hyphen'.split(' ').forEach(function(w){ FILLER[w]=1; });
   function supported(){ return !!(window.SpeechRecognition||window.webkitSpeechRecognition); }
-  function dist(a,b){ var n=a.length,m=b.length,prev=[],cur,i,j; for(j=0;j<=m;j++) prev[j]=j;
-    for(i=1;i<=n;i++){ cur=[i]; for(j=1;j<=m;j++){ cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); } prev=cur; } return prev[m]; }
-  /* each spoken token becomes letters: a letter name ("bee", "are", "double u") is one letter and anything else is split up;
-     a token that could be read either way takes the reading closest to the word; saying the word itself (bee style) is not spelling it */
-  function parse(text,target){ var toks=String(text||'').toLowerCase().split(/[^a-z]+/).filter(Boolean), parts=[], word=false, tg=(target||'').toLowerCase(), i, p;
-    for(i=0;i<toks.length;i++){ var t=toks[i];
-      if(t==='double'&&/^(u|you|yu|ewe)$/.test(toks[i+1]||'')){ parts.push(['w']); i++; continue; }
-      if(t==='doubleu'||t==='doubleyou'){ parts.push(['w']); continue; }
-      if(tg&&t===tg){ word=true; continue; }
-      if(t.length===1){ parts.push([t]); continue; }
-      var split=t.split(''); parts.push(NAMES[t]?[NAMES[t],split]:[split]); }
-    var amb=[]; for(p=0;p<parts.length;p++) if(parts[p].length===2) amb.push(p);
-    var best=null, bestD=Infinity, combos=amb.length<=8?(1<<amb.length):1, tgl=tg.split('');
-    for(var c=0;c<combos;c++){ var L=[]; for(p=0;p<parts.length;p++){ var opt=parts[p], k=amb.indexOf(p); L=L.concat(k<0?opt[0]:(((c>>k)&1)?opt[1]:opt[0])); }
-      var d=tg?dist(L,tgl):0; if(d<bestD){ bestD=d; best=L; } }
-    return {letters:best||[],word:word}; }
-  function letters(){ return fin.concat(tmp); }
-  function target(){ return G.cur?G.cur.w:''; }
-  function render(){ var h=$('heard'), L=letters();
-    if(!L.length) h.innerHTML='<span class="hd-empty">'+(on?'Listening... say the letters one at a time.':'The letters you say will show up here.')+'</span>';
-    else h.innerHTML=fin.map(function(ch){ return '<span class="tile pop">'+esc(ch)+'</span>'; }).join('')+tmp.map(function(ch){ return '<span class="tile dim">'+esc(ch)+'</span>'; }).join('');
+  function lc(s){ return String(s||'').toLowerCase(); }
+  function target(){ return G.cur?lc(G.cur.w):''; }
+  /* each spoken token can be read several ways: a letter name is one letter, a filler word can be nothing, anything else is
+     its letters; saying the word itself is not spelling it, unless the recognizer wrote it in capitals (how it writes spelled letters) */
+  function tokOpts(raw,tg){ var t=lc(raw), sp=t.split('');
+    if(/^[0-9]+$/.test(t)) return t==='0'?[['o']]:[[]];
+    if(tg&&t.length>1&&t===tg) return (raw===raw.toUpperCase())?[sp]:null;
+    if(t.length===1) return [[t]];
+    var o=[]; if(NAMES[t]) o.push([NAMES[t]]); if(FILLER[t]) o.push([]); o.push(sp); return o; }
+  function tokens(text,tg){ var raw=String(text||'').split(/[^A-Za-z0-9]+/).filter(Boolean), out=[], word=false;
+    for(var i=0;i<raw.length;i++){ var t=lc(raw[i]);
+      if(t==='double'&&/^(u|you|yu|ewe)$/.test(lc(raw[i+1]))){ out.push([['w']]); i++; continue; }
+      if(t==='doubleu'||t==='doubleyou'){ out.push([['w']]); continue; }
+      var o=tokOpts(raw[i],tg); if(o===null){ word=true; continue; } out.push(o); }
+    return {opts:out,word:word}; }
+  /* a beam of readings, each with its edit-distance row against the word */
+  function step(row,ch,tg){ var r=[row[0]+1]; for(var j=1;j<=tg.length;j++) r[j]=Math.min(row[j]+1,r[j-1]+1,row[j-1]+(ch===tg[j-1]?0:1)); return r; }
+  function pscore(s){ var b=Infinity; for(var j=0;j<s.row.length;j++){ var v=s.row[j]-0.001*j; if(v<b) b=v; } return b; }
+  function start0(tg){ var r=[]; for(var j=0;j<=tg.length;j++) r.push(j); return [{L:[],row:r}]; }
+  function prune(B){ var seen={}, out=[]; B.forEach(function(s){ s.ps=pscore(s); }); B.sort(function(a,b){ return a.ps-b.ps; });
+    for(var i=0;i<B.length&&out.length<BEAM;i++){ var k=B[i].L.join(''); if(seen[k]) continue; seen[k]=1; out.push(B[i]); } return out; }
+  function run(segs,tg,B0){ var B=B0, word=false;
+    segs.forEach(function(alts){ var NB=[];
+      alts.forEach(function(text,k){ var tk=tokens(text,tg), cur=B; if(k===0&&tk.word) word=true;
+        tk.opts.forEach(function(opts){ var nx=[]; cur.forEach(function(s){ opts.forEach(function(o){ var row=s.row; for(var q=0;q<o.length;q++) row=step(row,o[q],tg); nx.push({L:s.L.concat(o),row:row}); }); }); cur=prune(nx); });
+        NB=NB.concat(cur); });
+      if(NB.length) B=prune(NB); });
+    return {beam:B,word:word}; }
+  function best(B,tg,full){ var b=null, bs=Infinity; (B||[]).forEach(function(s){ var sc=full?s.row[tg.length]:pscore(s); if(sc<bs){ bs=sc; b=s; } }); return b?b.L:[]; }
+  function parse(text,tg){ tg=lc(tg); var r=run([[text]],tg,start0(tg)); return {letters:best(r.beam,tg,true),word:r.word}; }
+  function recompute(){ var tg=target(); if(!base) base=start0(tg); var rf=run(segF,tg,base), ri=run(segI,tg,rf.beam); beamF=rf.beam; beamAll=ri.beam; heardWord=rf.word||ri.word; }
+  function clearAll(){ base=start0(target()); segF=[]; segI=[]; shownSolid=0; recompute(); }
+  function letters(){ var tg=target(); if(!beamAll) recompute(); return best(beamAll,tg,true); }
+  function render(){ var h=$('heard'), tg=target(), A=beamAll?best(beamAll,tg,false):[], F=beamF?best(beamF,tg,false):[], n=0;
+    while(n<F.length&&n<A.length&&F[n]===A[n]) n++;
+    if(!A.length) h.innerHTML='<span class="hd-empty">'+(on?'Listening... say the letters one at a time.':'The letters you say will show up here.')+'</span>';
+    else h.innerHTML=A.map(function(ch,i){ return '<span class="tile'+(i<n?(i>=shownSolid?' pop':''):' dim')+'">'+esc(ch)+'</span>'; }).join('');
+    shownSolid=n;
     var b=$('micBtn'); b.classList.toggle('listening',on); b.setAttribute('aria-pressed',on?'true':'false');
-    $('micLabel').textContent=on?'Listening... tap when you are done':(fin.length?'Tap to keep going':'Tap, then spell it out loud'); }
+    $('micLabel').textContent=on?'Listening... tap when you are done':(A.length&&src==='mic'?'Tap to keep going':'Tap, then spell it out loud'); }
   function notice(msg){ var n=$('micNotice'); n.textContent=msg; n.hidden=false; }
-  function onResult(id,e){ if(id!==gen) return; var f='', t='', i;
-    for(i=0;i<e.results.length;i++){ var r=e.results[i], s=r[0]?r[0].transcript:''; if(r.isFinal) f+=' '+s; else t+=' '+s; }
-    var pf=parse(f,target()), pt=parse(t,target()); fin=base.concat(pf.letters); tmp=pt.letters; heardWord=pf.word||pt.word; render();
-    var w=target(); if(pf.letters.length&&fin.length>=w.length&&G.phase!=='done'){ clearTimeout(ctimer); ctimer=setTimeout(function(){ if(on&&G.cur&&G.screen==='scr-play'&&G.phase!=='done') check(); },500); }
-    else if(!fin.length&&!tmp.length&&heardWord&&f.trim()) bubble('playBubble','I heard the word. Now say each letter, with a little pause.'); }
-  function onEnd(id){ if(id!==gen) return; on=false; base=fin; tmp=[];
-    if(want&&G.screen==='scr-play'&&G.phase!=='done'&&restarts<30){ restarts++; setTimeout(function(){ if(want&&!on) begin(); },150); } else { want=false; render(); } }
+  /* the word is checked half a second after the letters match it; letters that don't match are checked after a longer pause */
+  function schedule(){ clearTimeout(ctimer); var tg=target(); if(!tg||G.phase==='done'||!beamAll) return;
+    var ex=beamAll.some(function(s){ return s.row[tg.length]===0; }), n=best(beamAll,tg,false).length, wait=ex?(src==='kb'?900:500):(src==='mic'&&n>=tg.length?2200:0);
+    if(wait) ctimer=setTimeout(function(){ if(G.cur&&G.screen==='scr-play'&&G.phase!=='done'&&G.mode==='say') check(); },wait); }
+  function wordOnly(msg){ if(heardWord&&!best(beamAll,target(),false).length) bubble('playBubble',msg); }
+  function onResult(id,e){ if(id!==gen) return; var F=[], I=[], lastF='';
+    for(var i=0;i<e.results.length;i++){ var r=e.results[i], alts=[]; for(var k=0;k<r.length&&k<5;k++) alts.push(String(r[k].transcript||''));
+      if(!alts.length) continue;
+      if(!r.isFinal){ I.push(alts); continue; }
+      /* Chrome on Android can repeat earlier results: an exact repeat with zero confidence, or one that holds everything said so far */
+      if(ANDROID){ var nt=lc(alts[0]).replace(/[^a-z0-9]+/g,' ').trim();
+        if(lastF&&F.length){ if(nt===lastF&&!(r[0].confidence>0)) continue; if(nt.length>lastF.length&&nt.indexOf(lastF)===0){ F[F.length-1]=alts; lastF=nt; continue; } }
+        lastF=nt; }
+      F.push(alts); }
+    segF=F; segI=I; recompute(); render(); schedule(); wordOnly('I heard the word. Now say each letter, with a little pause.'); }
+  function onEnd(id){ if(id!==gen) return; on=false; base=beamAll||base; segF=[]; segI=[]; recompute();
+    if(want&&G.screen==='scr-play'&&G.phase!=='done'&&restarts<30){ restarts++; setTimeout(function(){ if(want&&!on&&id===gen) begin(); },150); } else { want=false; render(); } }
   function onError(id,e){ if(id!==gen) return; var k=(e&&e.error)||'';
-    if(k==='not-allowed'||k==='service-not-allowed'){ want=false; notice('The microphone is blocked. Allow the mic for this page in the browser, then tap the mic again.'); }
-    else if(k==='audio-capture'){ want=false; notice('No microphone was found. Plug one in, or play Spell It instead.'); }
-    else if(k==='network'){ want=false; notice('Hearing you needs the internet. Check the connection and tap the mic again.'); }
+    if(k==='not-allowed'){ want=false; notice('The mic is blocked for this page. Allow it in the browser, or use the voice typing box below.'); }
+    else if(k==='service-not-allowed'){ want=false; notice('Speech is turned off on this device. Turn on Dictation in Settings (on iPhone: General, then Keyboard) and try again.'); }
+    else if(k==='audio-capture'){ want=false; notice('No microphone was found. Use the voice typing box below, or play Spell It.'); }
+    else if(k==='network'){ want=false; notice('Hearing you needs the internet. Check the connection, or use the voice typing box below.'); }
     else if(k==='no-speech'){ want=false; bubble('playBubble',"I didn't hear anything. Tap the mic and say the letters."); } }
   function begin(){ var C=window.SpeechRecognition||window.webkitSpeechRecognition; if(!C) return false;
     var id=++gen; try{ if(rec) rec.abort(); }catch(e){}
-    try{ rec=new C(); rec.lang='en-US'; rec.continuous=true; rec.interimResults=true; rec.maxAlternatives=1;
+    try{ rec=new C(); rec.lang='en-US'; rec.continuous=true; rec.interimResults=true; rec.maxAlternatives=5;
       rec.onresult=function(e){ onResult(id,e); }; rec.onend=function(){ onEnd(id); }; rec.onerror=function(e){ onError(id,e); };
-      rec.start(); on=true; want=true; }catch(e){ on=false; want=false; notice('The microphone could not start. Tap the mic to try again.'); render(); return false; }
+      rec.start(); on=true; want=true; }catch(e){ on=false; want=false; notice('The mic could not start. Tap it to try again, or use the voice typing box below.'); render(); return false; }
     $('micNotice').hidden=true; render(); return true; }
-  function start(){ if(!G.cur||G.phase==='done') return false; Voice.stop(); restarts=0; tmp=[]; return begin(); }
-  /* stop keeps the letters heard so far (the next tap carries on); reset wipes them for a new word */
-  function stop(){ want=false; clearTimeout(ctimer); if(on){ on=false; fin=fin.concat(tmp); base=fin; tmp=[]; gen++; try{ if(rec) rec.abort(); }catch(e){} } render(); }
-  function reset(){ stop(); base=[]; fin=[]; tmp=[]; heardWord=false; $('micNotice').hidden=true; render(); }
+  function start(){ if(!G.cur||G.phase==='done') return false; Voice.stop(); restarts=0; if(src!=='mic'){ src='mic'; clearAll(); } $('sayInput').value=''; return begin(); }
+  /* stop keeps what was heard (the next tap carries on); reset wipes it for a new word */
+  function stop(){ want=false; clearTimeout(ctimer); if(on){ on=false; gen++; try{ if(rec) rec.abort(); }catch(e){} base=beamAll||base; segF=[]; segI=[]; recompute(); } render(); }
+  function reset(){ stop(); src='mic'; heardWord=false; clearAll(); $('sayInput').value=''; $('micNotice').hidden=true; render(); }
   function toggle(){ if(!G.cur||G.phase==='done') return; SFX.warm();
     if(on){ stop(); if(letters().length) check(); else bubble('playBubble','Say the letters, then tap the mic again.'); }
     else if(start()) bubble('playBubble','Go ahead, spell it out loud!'); }
-  return {supported:supported,parse:parse,letters:letters,start:start,stop:stop,reset:reset,toggle:toggle,render:render,get on(){return on;}};
+  /* the keyboard's own voice typing fills the box; what it types is read the same way */
+  function fromText(text){ if(!G.cur||G.phase==='done') return; if(on) stop(); src='kb'; base=start0(target()); segF=String(text||'').trim()?[[String(text)]]:[]; segI=[]; recompute(); render(); schedule();
+    wordOnly("That's the whole word. Say each letter, with a little pause."); }
+  function kbHint(){ var touch=/Android|iPhone|iPad|iPod/i.test(UA)||(navigator.maxTouchPoints>1&&/Macintosh/.test(UA));
+    if(touch) return 'Tap the box, then tap the mic on your keyboard and say the letters.';
+    if(/Windows/i.test(UA)) return 'Click the box, press the Windows key + H, and say the letters.';
+    if(/Macintosh/i.test(UA)) return 'Click the box, press the Fn key twice (or the mic key), and say the letters.';
+    return "Click the box and use your computer's voice typing to say the letters."; }
+  function prepare(){ var ok=supported(); $('micBtn').hidden=!ok; $('sayHint').hidden=!ok; $('sayOrTxt').textContent=ok?"or use your device's voice typing":"Spell it out loud with your device's voice typing"; $('kbHint').textContent=kbHint(); }
+  return {supported:supported,parse:parse,letters:letters,start:start,stop:stop,reset:reset,toggle:toggle,render:render,fromText:fromText,prepare:prepare,
+    get on(){return on;}, get heardWord(){return heardWord;}, _android:function(v){ ANDROID=!!v; }};
 })();
 
 /* the round */
@@ -2088,13 +2143,12 @@ function buildQueue(only){
   return shuffle(p.slice(0,n).map(function(x){return x.w;}));
 }
 function startRound(mode,only){
-  if(mode==='say'&&!Say.supported()){ toast("This browser can't hear you. Try Chrome, Edge, or Safari for Say It."); return; }
   clearTimeout(G.timer); clearTimeout(G.vtimer);
   G.mode=mode; G.queue=buildQueue(only).map(function(w){return {w:w,retry:false,status:''};}); G.idx=0; G.retry=[]; G.streak=0;
   G.stats={first:0,fixed:0,missed:[],pearls:0,best:0,n:G.queue.length};
   if(!G.queue.length){ toast('No words to practice with these settings.'); return; }
   updateStreak(); show('scr-play'); setMood('neutral');
-  var tiles=(mode==='tiles'), say=(mode==='say'); $('app').setAttribute('data-mode',mode); $('tileArea').hidden=!tiles; $('sayArea').hidden=!say; $('spellForm').hidden=(tiles||say); $('clearBtn').hidden=!(tiles||say);
+  var tiles=(mode==='tiles'), say=(mode==='say'); $('app').setAttribute('data-mode',mode); $('tileArea').hidden=!tiles; $('sayArea').hidden=!say; $('spellForm').hidden=(tiles||say); $('clearBtn').hidden=!(tiles||say); if(say) Say.prepare();
   $('voiceNotice').hidden=Voice.ok;
   nextWord();
 }
@@ -2128,7 +2182,7 @@ function check(){ clearTimeout(G.ttimer);
   if(G.phase==='done'||!G.cur) return;
   if(G.mode==='say') Say.stop();
   var ans=currentAnswer();
-  if(!ans){ bubble('playBubble', G.mode==='tiles'?'Tap the letters first!':G.mode==='say'?'Tap the mic and say the letters first!':'Type the word first!'); SFX.tick(); refocus(); return; }
+  if(!ans){ bubble('playBubble', G.mode==='tiles'?'Tap the letters first!':G.mode==='say'?(Say.heardWord?'Say each letter, with a little pause. The whole word does not count.':'Say the letters first!'):'Type the word first!'); SFX.tick(); refocus(); return; }
   if(ans.toLowerCase()===G.cur.w.toLowerCase()) onCorrect(); else onWrong(ans);
 }
 function onCorrect(){ clearTimeout(G.vtimer);
@@ -2387,6 +2441,7 @@ $('meanBtn').addEventListener('click',function(){ if(!G.cur) return; Voice.meani
 $('hintBtn').addEventListener('click',hint);
 $('clearBtn').addEventListener('click',function(){ if(G.mode==='tiles'&&G.phase!=='done'){ clearTimeout(G.ttimer); G.tileSel=[]; renderTiles(); SFX.tick(); } else if(G.mode==='say'&&G.phase!=='done'){ Say.reset(); SFX.tick(); } });
 $('micBtn').addEventListener('click',function(){ Say.toggle(); });
+$('sayInput').addEventListener('input',function(){ Say.fromText(this.value); });
 $('tiles').addEventListener('click',function(e){ var b=e.target.closest('.tile.pick'); if(b&&!b.disabled) pickTile(parseInt(b.getAttribute('data-i'),10)); });
 $('slots').addEventListener('click',function(e){ var b=e.target.closest('.tile.slot'); if(b) unpickSlot(parseInt(b.getAttribute('data-i'),10)); });
 document.addEventListener('keydown',tileKey);
@@ -2414,7 +2469,7 @@ window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},worl
 /* redraw after the online copy changed under this page */
 function refreshView(){ $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
-var BUILD='2026-10-01.3';
+var BUILD='2026-10-02.1';
 function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
   fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
     if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }
