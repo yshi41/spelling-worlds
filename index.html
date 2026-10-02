@@ -80,6 +80,9 @@ body{margin:0;font-family:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif
 button{font-family:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--sky);outline-offset:3px}
 h1,h2,h3{font-family:var(--display),'Nunito',sans-serif;text-wrap:balance;margin:0}
+/* every world's display font gets the same line height, so switching or previewing a world never moves anything (Baloo 2 runs about 1.6 tall by default) */
+h1,h2,h3,.brand,.stat,.btn,.bubble,.levelbar .lb-lv,.seg-btn,.axo-name,.mode-btn .mode-name,.round-label,.hint-strip .h,.spell-input,.tile,.lockin .lock-word,.word-row .wr-word,.word-detail .wd-word,.sum-stat b,.missed-list .mw,.float-txt,.player-line b,.list-badge,.level-card .lc-q{line-height:1.2}
+#pearlCount{min-width:2.6em}#streakCount{min-width:1.3em}
 
 /* ambient: bubbles in the lagoon, sugar puffs in the sweetshop */
 .bubbles{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:0}
@@ -2328,7 +2331,7 @@ window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},worl
 /* redraw after the online copy changed under this page */
 function refreshView(){ $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
-var BUILD='2026-10-01.1';
+var BUILD='2026-10-01.2';
 function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
   fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
     if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }
