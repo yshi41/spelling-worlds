@@ -453,6 +453,9 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 .say-or::before,.say-or::after{content:"";flex:1;border-top:2px dashed var(--line)}
 .say-input{font-family:var(--display),sans-serif;font-weight:600;font-size:1.3rem;letter-spacing:.04em;text-align:center;width:100%;max-width:440px;border:3px solid var(--line);border-radius:16px;padding:10px 12px;background:var(--surface-2);color:var(--ink)}
 .say-input:focus{border-color:var(--sky);outline:none}
+.mic-btn.listening.warming{background:var(--gold-deep);color:var(--gold-ink);animation:none}
+#checkBtn.ready{animation:readyPulse 1.1s ease-in-out infinite}
+@keyframes readyPulse{50%{transform:scale(1.05)}}
 @media (max-width:720px){ .say-input{font-size:1.1rem;padding:8px 10px} }
 
 /* word list */
@@ -2072,22 +2075,24 @@ var Say=(function(){
     return {beam:B,word:word}; }
   function best(B,tg,full){ var b=null, bs=Infinity; (B||[]).forEach(function(s){ var sc=full?s.row[tg.length]:pscore(s); if(sc<bs){ bs=sc; b=s; } }); return b?b.L:[]; }
   function parse(text,tg){ tg=lc(tg); var r=run([[text]],tg,start0(tg)); return {letters:best(r.beam,tg,true),word:r.word}; }
+  /* listening: letters show as they are heard; nothing is checked until the kid confirms with "Yes, check it!" */
+  var ready=false, lastRes=0, qtimer=null, rtimer=null, phrasesOK=null, QUIET=2200, LETTERS='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   function recompute(){ var tg=target(); if(!base) base=start0(tg); var rf=run(segF,tg,base), ri=run(segI,tg,rf.beam); beamF=rf.beam; beamAll=ri.beam; heardWord=rf.word||ri.word; }
   function clearAll(){ base=start0(target()); segF=[]; segI=[]; shownSolid=0; recompute(); }
   function letters(){ var tg=target(); if(!beamAll) recompute(); return best(beamAll,tg,true); }
-  function render(){ var h=$('heard'), tg=target(), A=beamAll?best(beamAll,tg,false):[], F=beamF?best(beamF,tg,false):[], n=0;
+  function shown(){ return beamAll?best(beamAll,target(),false):[]; }
+  function render(){ var h=$('heard'), tg=target(), A=shown(), F=beamF?best(beamF,tg,false):[], n=0;
     while(n<F.length&&n<A.length&&F[n]===A[n]) n++;
-    if(!A.length) h.innerHTML='<span class="hd-empty">'+(on?'Listening... say the letters one at a time.':'The letters you say will show up here.')+'</span>';
+    if(!A.length) h.innerHTML='<span class="hd-empty">'+(on?(ready?'Listening... say the letters one at a time.':'Getting the mic ready...'):'The letters you say will show up here.')+'</span>';
     else h.innerHTML=A.map(function(ch,i){ return '<span class="tile'+(i<n?(i>=shownSolid?' pop':''):' dim')+'">'+esc(ch)+'</span>'; }).join('');
     shownSolid=n;
-    var b=$('micBtn'); b.classList.toggle('listening',on); b.setAttribute('aria-pressed',on?'true':'false');
-    $('micLabel').textContent=on?'Listening... tap when you are done':(A.length&&src==='mic'?'Tap to keep going':'Tap, then spell it out loud'); }
+    var b=$('micBtn'); b.classList.toggle('listening',on); b.classList.toggle('warming',on&&!ready); b.setAttribute('aria-pressed',on?'true':'false');
+    $('micLabel').textContent=on?(ready?'Listening... tap when you are done':'Getting the mic ready...'):(A.length&&src==='mic'?'Tap to add more letters':'Tap, then spell it out loud');
+    if(G.mode==='say'){ var rv=!on&&A.length>0&&G.phase!=='done', c=$('checkBtn'); c.textContent=rv?'Yes, check it!':'Check!'; c.classList.toggle('ready',rv); } }
   function notice(msg){ var n=$('micNotice'); n.textContent=msg; n.hidden=false; }
-  /* the word is checked half a second after the letters match it; letters that don't match are checked after a longer pause */
-  function schedule(){ clearTimeout(ctimer); var tg=target(); if(!tg||G.phase==='done'||!beamAll) return;
-    var ex=beamAll.some(function(s){ return s.row[tg.length]===0; }), n=best(beamAll,tg,false).length, wait=ex?(src==='kb'?900:500):(src==='mic'&&n>=tg.length?2200:0);
-    if(wait) ctimer=setTimeout(function(){ if(G.cur&&G.screen==='scr-play'&&G.phase!=='done'&&G.mode==='say') check(); },wait); }
-  function wordOnly(msg){ if(heardWord&&!best(beamAll,target(),false).length) bubble('playBubble',msg); }
+  /* the kid looks at the letters and decides: check them, add more, or say it again */
+  function review(){ render(); if(G.phase==='done'||!G.cur||G.mode!=='say') return; if(shown().length) bubble('playBubble','Is that what you said? Tap "Yes, check it!" or "Say it again".'); }
+  function wordOnly(msg){ if(heardWord&&!shown().length) bubble('playBubble',msg); }
   function onResult(id,e){ if(id!==gen) return; var F=[], I=[], lastF='';
     for(var i=0;i<e.results.length;i++){ var r=e.results[i], alts=[]; for(var k=0;k<r.length&&k<5;k++) alts.push(String(r[k].transcript||''));
       if(!alts.length) continue;
@@ -2097,30 +2102,45 @@ var Say=(function(){
         if(lastF&&F.length){ if(nt===lastF&&!(r[0].confidence>0)) continue; if(nt.length>lastF.length&&nt.indexOf(lastF)===0){ F[F.length-1]=alts; lastF=nt; continue; } }
         lastF=nt; }
       F.push(alts); }
-    segF=F; segI=I; recompute(); render(); schedule(); wordOnly('I heard the word. Now say each letter, with a little pause.'); }
+    ready=true; segF=F; segI=I; recompute(); render(); lastRes=Date.now();
+    /* a quiet spell after some letters means the kid is done: stop listening and ask */
+    clearTimeout(qtimer); if(shown().length) qtimer=setTimeout(function(){ if(on&&id===gen){ stop(); review(); } },QUIET);
+    wordOnly('I heard the word. Now say each letter, with a little pause.'); }
   function onEnd(id){ if(id!==gen) return; on=false; base=beamAll||base; segF=[]; segI=[]; recompute();
-    if(want&&G.screen==='scr-play'&&G.phase!=='done'&&restarts<30){ restarts++; setTimeout(function(){ if(want&&!on&&id===gen) begin(); },150); } else { want=false; render(); } }
+    var has=shown().length>0, recent=Date.now()-lastRes<1500;
+    if(want&&G.screen==='scr-play'&&G.phase!=='done'&&restarts<30&&(!has||recent)){ restarts++; setTimeout(function(){ if(want&&!on&&id===gen) begin(); },60); }
+    else { want=false; ready=false; clearTimeout(qtimer); review(); } }
   function onError(id,e){ if(id!==gen) return; var k=(e&&e.error)||'';
+    if(k==='phrases-not-supported'){ phrasesOK=false; return; }
     if(k==='not-allowed'){ want=false; notice('The mic is blocked for this page. Allow it in the browser, or use the voice typing box below.'); }
     else if(k==='service-not-allowed'){ want=false; notice('Speech is turned off on this device. Turn on Dictation in Settings (on iPhone: General, then Keyboard) and try again.'); }
     else if(k==='audio-capture'){ want=false; notice('No microphone was found. Use the voice typing box below, or play Spell It.'); }
     else if(k==='network'){ want=false; notice('Hearing you needs the internet. Check the connection, or use the voice typing box below.'); }
-    else if(k==='no-speech'){ want=false; bubble('playBubble',"I didn't hear anything. Tap the mic and say the letters."); } }
+    else if(k==='no-speech'&&!shown().length){ want=false; bubble('playBubble',"I didn't hear anything. Tap the mic and say the letters."); } }
+  function isReady(id){ if(id===gen&&on&&!ready){ ready=true; render(); } }
   function begin(){ var C=window.SpeechRecognition||window.webkitSpeechRecognition; if(!C) return false;
     var id=++gen; try{ if(rec) rec.abort(); }catch(e){}
     try{ rec=new C(); rec.lang='en-US'; rec.continuous=true; rec.interimResults=true; rec.maxAlternatives=5;
+      /* where the browser supports it, nudge the recognizer toward letter names */
+      if(phrasesOK!==false&&window.SpeechRecognitionPhrase){ try{ rec.phrases=LETTERS.map(function(l){ return new window.SpeechRecognitionPhrase(l,4); }); }catch(e){ phrasesOK=false; } }
       rec.onresult=function(e){ onResult(id,e); }; rec.onend=function(){ onEnd(id); }; rec.onerror=function(e){ onError(id,e); };
+      rec.onstart=function(){ isReady(id); }; rec.onaudiostart=function(){ isReady(id); };
       rec.start(); on=true; want=true; }catch(e){ on=false; want=false; notice('The mic could not start. Tap it to try again, or use the voice typing box below.'); render(); return false; }
+    clearTimeout(rtimer); rtimer=setTimeout(function(){ isReady(id); },1500);
     $('micNotice').hidden=true; render(); return true; }
-  function start(){ if(!G.cur||G.phase==='done') return false; Voice.stop(); restarts=0; if(src!=='mic'){ src='mic'; clearAll(); } $('sayInput').value=''; return begin(); }
-  /* stop keeps what was heard (the next tap carries on); reset wipes it for a new word */
-  function stop(){ want=false; clearTimeout(ctimer); if(on){ on=false; gen++; try{ if(rec) rec.abort(); }catch(e){} base=beamAll||base; segF=[]; segI=[]; recompute(); } render(); }
+  function start(){ if(!G.cur||G.phase==='done') return false; Voice.stop(); restarts=0; ready=false; lastRes=0; if(src!=='mic'){ src='mic'; clearAll(); } $('sayInput').value=''; return begin(); }
+  /* stop keeps what was heard (the next tap adds more); reset wipes it */
+  function stop(){ want=false; clearTimeout(qtimer); if(on){ on=false; gen++; try{ if(rec) rec.abort(); }catch(e){} base=beamAll||base; segF=[]; segI=[]; recompute(); } ready=false; render(); }
   function reset(){ stop(); src='mic'; heardWord=false; clearAll(); $('sayInput').value=''; $('micNotice').hidden=true; render(); }
   function toggle(){ if(!G.cur||G.phase==='done') return; SFX.warm();
-    if(on){ stop(); if(letters().length) check(); else bubble('playBubble','Say the letters, then tap the mic again.'); }
+    if(on){ stop(); if(shown().length) review(); else bubble('playBubble','Say the letters, then tap the mic again.'); }
     else if(start()) bubble('playBubble','Go ahead, spell it out loud!'); }
+  /* "Say it again": wipe the letters and listen again the same way as before */
+  function again(){ if(!G.cur||G.phase==='done') return; var kb=(src==='kb')||!supported(); reset(); SFX.tick();
+    if(kb){ try{ $('sayInput').focus(); }catch(e){} bubble('playBubble','Okay, say it again!'); } else if(start()) bubble('playBubble','Okay, spell it again!'); }
   /* the keyboard's own voice typing fills the box; what it types is read the same way */
-  function fromText(text){ if(!G.cur||G.phase==='done') return; if(on) stop(); src='kb'; base=start0(target()); segF=String(text||'').trim()?[[String(text)]]:[]; segI=[]; recompute(); render(); schedule();
+  function fromText(text){ if(!G.cur||G.phase==='done') return; if(on) stop(); src='kb'; base=start0(target()); segF=String(text||'').trim()?[[String(text)]]:[]; segI=[]; recompute(); render();
+    clearTimeout(qtimer); qtimer=setTimeout(function(){ if(src==='kb'&&G.mode==='say') review(); },900);
     wordOnly("That's the whole word. Say each letter, with a little pause."); }
   function kbHint(){ var touch=/Android|iPhone|iPad|iPod/i.test(UA)||(navigator.maxTouchPoints>1&&/Macintosh/.test(UA));
     if(touch) return 'Tap the box, then tap the mic on your keyboard and say the letters.';
@@ -2128,8 +2148,8 @@ var Say=(function(){
     if(/Macintosh/i.test(UA)) return 'Click the box, press the Fn key twice (or the mic key), and say the letters.';
     return "Click the box and use your computer's voice typing to say the letters."; }
   function prepare(){ var ok=supported(); $('micBtn').hidden=!ok; $('sayHint').hidden=!ok; $('sayOrTxt').textContent=ok?"or use your device's voice typing":"Spell it out loud with your device's voice typing"; $('kbHint').textContent=kbHint(); }
-  return {supported:supported,parse:parse,letters:letters,start:start,stop:stop,reset:reset,toggle:toggle,render:render,fromText:fromText,prepare:prepare,
-    get on(){return on;}, get heardWord(){return heardWord;}, _android:function(v){ ANDROID=!!v; }};
+  return {supported:supported,parse:parse,letters:letters,start:start,stop:stop,reset:reset,toggle:toggle,again:again,render:render,fromText:fromText,prepare:prepare,
+    get on(){return on;}, get ready(){return ready;}, get heardWord(){return heardWord;}, _android:function(v){ ANDROID=!!v; }};
 })();
 
 /* the round */
@@ -2148,7 +2168,7 @@ function startRound(mode,only){
   G.stats={first:0,fixed:0,missed:[],pearls:0,best:0,n:G.queue.length};
   if(!G.queue.length){ toast('No words to practice with these settings.'); return; }
   updateStreak(); show('scr-play'); setMood('neutral');
-  var tiles=(mode==='tiles'), say=(mode==='say'); $('app').setAttribute('data-mode',mode); $('tileArea').hidden=!tiles; $('sayArea').hidden=!say; $('spellForm').hidden=(tiles||say); $('clearBtn').hidden=!(tiles||say); if(say) Say.prepare();
+  var tiles=(mode==='tiles'), say=(mode==='say'); $('app').setAttribute('data-mode',mode); $('tileArea').hidden=!tiles; $('sayArea').hidden=!say; $('spellForm').hidden=(tiles||say); $('clearBtn').hidden=!(tiles||say); $('clearBtn').textContent=say?'Say it again':'Clear'; $('checkBtn').textContent='Check!'; $('checkBtn').classList.remove('ready'); if(say) Say.prepare();
   $('voiceNotice').hidden=Voice.ok;
   nextWord();
 }
@@ -2439,7 +2459,7 @@ $('hearBtn').addEventListener('click',function(){ if(G.cur){ Voice.full(G.cur); 
 $('sentBtn').addEventListener('click',function(){ if(!G.cur) return; Voice.sentence(G.cur); showInfo('<b>Sentence:</b> '+esc(G.cur.s.replace(new RegExp(G.cur.w,'ig'),'____'))); refocus(); });
 $('meanBtn').addEventListener('click',function(){ if(!G.cur) return; Voice.meaning(G.cur); showInfo('<b>Meaning:</b> '+esc(G.cur.d)); refocus(); });
 $('hintBtn').addEventListener('click',hint);
-$('clearBtn').addEventListener('click',function(){ if(G.mode==='tiles'&&G.phase!=='done'){ clearTimeout(G.ttimer); G.tileSel=[]; renderTiles(); SFX.tick(); } else if(G.mode==='say'&&G.phase!=='done'){ Say.reset(); SFX.tick(); } });
+$('clearBtn').addEventListener('click',function(){ if(G.mode==='tiles'&&G.phase!=='done'){ clearTimeout(G.ttimer); G.tileSel=[]; renderTiles(); SFX.tick(); } else if(G.mode==='say'){ Say.again(); } });
 $('micBtn').addEventListener('click',function(){ Say.toggle(); });
 $('sayInput').addEventListener('input',function(){ Say.fromText(this.value); });
 $('tiles').addEventListener('click',function(e){ var b=e.target.closest('.tile.pick'); if(b&&!b.disabled) pickTile(parseInt(b.getAttribute('data-i'),10)); });
@@ -2469,7 +2489,7 @@ window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},worl
 /* redraw after the online copy changed under this page */
 function refreshView(){ $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
-var BUILD='2026-10-02.1';
+var BUILD='2026-10-02.2';
 function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
   fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
     if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }
