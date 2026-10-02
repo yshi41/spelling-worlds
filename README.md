@@ -12,9 +12,10 @@ A spelling bee practice game for six players: Charlie, Riley, Vera, Cora, Addie,
 - **Amy** starts in the boba shop: milk tea, taro, matcha, strawberry, mango, and a boba pearl, with boba as rewards.
 - **World button** on the home screen opens the list of six worlds; tapping one previews it, and **Save world** keeps it (saved online).
 - **Every character has its own level.** Each of the 36 characters keeps its own rewards and level, starting at level 0, so picking a new character starts that one from scratch and going back finds the old one right where it was. The character chips show each one's level, and MAX once it reaches the top level.
-- **Tile Time** earns rewards but never counts toward mastering a word; only Spell It does.
+- **Say It** is the bee itself: hear the word, tap the mic, and spell it out loud. The browser's speech recognition (Chrome, Edge, or Safari, with the mic allowed and an internet connection) turns what it hears into letter tiles as you go. Letter names like "bee" or "double u" count as letters; saying the whole word does not count as spelling it. The answer is checked as soon as enough letters are in, or when the mic is tapped again.
+- **Tile Time** earns rewards but never counts toward mastering a word; only Spell It and Say It do.
 - A big badge on every screen shows which word list is in use: blue for 3rd grade words, purple for 4th grade words.
-- Each word is read aloud with a sentence (browser text-to-speech). Type it, or tap letter tiles into order.
+- Each word is read aloud with a sentence (browser text-to-speech). Type it, say it out loud, or tap letter tiles into order.
 - Misses show a letter-by-letter diff, then the word gets spelled out loud and retyped once to lock it in.
 - Correct answers earn rewards for the character being played; streaks earn bonuses; every level adds an outfit piece to the character and something new to the scene.
 
@@ -38,7 +39,7 @@ The 3rd and 4th grade lists are the Scripps School Spelling Bee study words for 
 
 ## Testing
 
-`test/test.js` drives the game in headless Chrome against an in-memory stand-in for the save service (`test/mockcloud.js`), so tests never touch the real saves. It checks online saving across two devices, offline play, lost replies, and resets, plus the player screen, hover previews, both worlds, spelling and tile rounds, misses and lock-in, hints, level-ups, each character keeping its own level, the word list, persistence across player switches and reloads, reset, and phone-width layout.
+`test/test.js` drives the game in headless Chrome against an in-memory stand-in for the save service (`test/mockcloud.js`), so tests never touch the real saves. It checks online saving across two devices, offline play, lost replies, and resets, plus the player screen, hover previews, both worlds, spelling, say-it (with a fake microphone), and tile rounds, misses and lock-in, hints, level-ups, each character keeping its own level, the word list, persistence across player switches and reloads, reset, and phone-width layout.
 
 ```
 cd test

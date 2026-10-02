@@ -364,6 +364,7 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 .mode-btn[data-mode="spell"]{background:var(--accent)}
 .mode-btn[data-mode="tiles"]{background:var(--sky)}
 .mode-btn[data-mode="list"]{background:var(--good)}
+.mode-btn[data-mode="say"]{background:var(--gold-deep);color:var(--gold-ink)}
 /* in dark mode the mint and blue buttons are bright, so their text goes dark to stay readable */
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) :is(.btn-good,.btn-sky,.mode-btn[data-mode="tiles"],.mode-btn[data-mode="list"]){color:#101828} }
 :root[data-theme="dark"] :is(.btn-good,.btn-sky,.mode-btn[data-mode="tiles"],.mode-btn[data-mode="list"]){color:#101828}
@@ -438,6 +439,16 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 .lockin .lock-word{font-family:var(--display),sans-serif;font-size:clamp(1.6rem,6vw,2.4rem);font-weight:700;letter-spacing:.18em;margin-top:4px}
 .action-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
 .notice{background:var(--bad-soft);border-radius:14px;padding:10px 14px;font-weight:700;font-size:.95rem}
+/* say it: the kid spells out loud; the letters the mic hears show up as tiles, unfinished ones faded */
+.say-area{display:flex;flex-direction:column;gap:10px;align-items:center}
+.mic-btn{display:inline-flex;align-items:center;justify-content:center;gap:10px;width:100%;max-width:440px;white-space:normal}
+.mic-btn svg{width:26px;height:26px;fill:currentColor;flex:none}
+.mic-btn.listening{background:var(--bad);animation:micpulse 1.2s ease-in-out infinite}
+@keyframes micpulse{0%,100%{box-shadow:0 5px 0 var(--press),0 0 0 0 rgba(238,100,72,.55)}50%{box-shadow:0 5px 0 var(--press),0 0 0 12px rgba(238,100,72,0)}}
+.heard{min-height:66px;align-items:center}
+.heard .tile.dim{opacity:.45;border-style:dashed;box-shadow:none}
+.heard .hd-empty{color:var(--ink-soft);font-weight:600;font-size:.95rem;text-align:center}
+.say-hint{margin:0;text-align:center}
 
 /* word list */
 .words-head{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px}
@@ -637,9 +648,9 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
 
 /* phones: tile mode has no keyboard, so its buttons sit in one normal row under the tiles */
 @media (max-width:720px), (max-height:500px){
-  #app[data-mode="tiles"] .action-row{position:static;margin:0;padding:0;background:none;flex-wrap:nowrap}
-  #app[data-mode="tiles"] .action-row .btn-big{width:auto;flex:1}
-  #app[data-mode="tiles"] .action-row #clearBtn{flex:0 0 auto}
+  #app[data-mode="tiles"] .action-row,#app[data-mode="say"] .action-row{position:static;margin:0;padding:0;background:none;flex-wrap:nowrap}
+  #app[data-mode="tiles"] .action-row .btn-big,#app[data-mode="say"] .action-row .btn-big{width:auto;flex:1}
+  #app[data-mode="tiles"] .action-row #clearBtn,#app[data-mode="say"] .action-row #clearBtn{flex:0 0 auto}
   .toast{bottom:auto;top:calc(58px + env(safe-area-inset-top,0px) + var(--vvtop,0px))}
 }
 @media (max-width:380px){ .listen-row{grid-template-columns:repeat(2,minmax(0,1fr))} }
@@ -689,7 +700,7 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
 /* a shine sweeps across the play buttons now and then */
 .mode-btn{position:relative;overflow:hidden}
 .mode-btn::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:45%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.45),transparent);transform:skewX(-18deg);animation:shine 5s ease-in-out infinite;pointer-events:none}
-.mode-btn[data-mode="tiles"]::after{animation-delay:1.3s}.mode-btn[data-mode="list"]::after{animation-delay:2.6s}
+.mode-btn[data-mode="tiles"]::after{animation-delay:1.3s}.mode-btn[data-mode="list"]::after{animation-delay:2.6s}.mode-btn[data-mode="say"]::after{animation-delay:3.9s}
 @keyframes shine{0%,70%{left:-60%}100%{left:130%}}
 .mode-btn:hover{transform:translateY(-3px)}
 /* a hot streak glows and flickers */
@@ -793,6 +804,7 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
           </div>
           <div class="mode-list">
             <button class="mode-btn" type="button" data-mode="spell"><span class="mode-name">Spell It</span><span class="mode-desc">Hear the word, then type it out.</span></button>
+            <button class="mode-btn" type="button" data-mode="say"><span class="mode-name">Say It</span><span class="mode-desc">Hear the word, then spell it out loud.</span></button>
             <button class="mode-btn" type="button" data-mode="tiles"><span class="mode-name">Tile Time</span><span class="mode-desc">Tap the mixed-up letters into order.</span></button>
             <button class="mode-btn" type="button" data-mode="list"><span class="mode-name">Word List</span><span class="mode-desc">See, hear, and check every word.</span></button>
           </div>
@@ -851,6 +863,12 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
         <div id="tileArea" hidden>
           <div class="tile-row slots" id="slots"></div>
           <div class="tile-row tiles" id="tiles"></div>
+        </div>
+        <div id="sayArea" class="say-area" hidden>
+          <button class="btn btn-sky btn-big mic-btn" id="micBtn" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a4 4 0 0 0 4-4V6a4 4 0 0 0-8 0v5a4 4 0 0 0 4 4zm6-4a6 6 0 0 1-12 0H4a8 8 0 0 0 7 7.93V22h2v-3.07A8 8 0 0 0 20 11h-2z"/></svg><span id="micLabel">Tap, then spell it out loud</span></button>
+          <div class="tile-row heard" id="heard"><span class="hd-empty">The letters you say will show up here.</span></div>
+          <p class="hint-text say-hint">Say one letter at a time, with a little pause: "B... A... M..."</p>
+          <div class="notice" id="micNotice" hidden></div>
         </div>
         <div class="action-row">
           <button class="btn btn-ghost" id="clearBtn" type="button" hidden>Clear</button>
@@ -1297,7 +1315,7 @@ var Voice=(function(){
     for(var i=0;i<pref.length&&!voice;i++){ for(var j=0;j<vs.length;j++){ if(vs[j].name.indexOf(pref[i])>=0&&/^en/i.test(vs[j].lang)){ voice=vs[j]; break; } } }
     if(!voice){ voice=vs.filter(function(v){return /^en[-_]US/i.test(v.lang);})[0]||vs.filter(function(v){return /^en/i.test(v.lang);})[0]||null; } }
   if(ok){ choose(); try{ speechSynthesis.onvoiceschanged=choose; }catch(e){} }
-  function say(text,rate){ if(!ok) return false; try{ var busy=speechSynthesis.speaking||speechSynthesis.pending; if(busy) speechSynthesis.cancel();
+  function say(text,rate){ if(!ok) return false; try{ if(typeof Say!=='undefined'&&Say&&Say.on) Say.stop(); }catch(e){} try{ var busy=speechSynthesis.speaking||speechSynthesis.pending; if(busy) speechSynthesis.cancel();
     var u=new SpeechSynthesisUtterance(text); u.rate=rate||0.85; u.pitch=1.05; u.lang='en-US'; if(voice) u.voice=voice; if(busy) setTimeout(function(){ try{ speechSynthesis.speak(u); }catch(e){} },80); else speechSynthesis.speak(u); }catch(e){ return false; } return true; }
   return { ok:ok, say:say,
     warm:function(){ if(!ok) return; try{ speechSynthesis.speak(new SpeechSynthesisUtterance('')); }catch(e){} },
@@ -2002,6 +2020,63 @@ function addPearls(n,fromEl,lvBefore){
   save();
 }
 
+/* say it: the kid spells the word out loud and the browser's speech recognition hears the letters */
+var Say=(function(){
+  var rec=null, gen=0, on=false, want=false, base=[], fin=[], tmp=[], heardWord=false, restarts=0, ctimer=null;
+  var NAMES={a:'a',ay:'a',b:'b',be:'b',bee:'b',c:'c',cee:'c',see:'c',sea:'c',si:'c',d:'d',de:'d',dee:'d',e:'e',ee:'e',f:'f',ef:'f',eff:'f',g:'g',ge:'g',gee:'g',h:'h',aitch:'h',ach:'h',i:'i',eye:'i',aye:'i',j:'j',jay:'j',k:'k',kay:'k',l:'l',el:'l',ell:'l',elle:'l',m:'m',em:'m',n:'n',en:'n',o:'o',oh:'o',owe:'o',p:'p',pe:'p',pee:'p',pea:'p',q:'q',cue:'q',queue:'q',kew:'q',que:'q',r:'r',ar:'r',are:'r',s:'s',es:'s',ess:'s',t:'t',te:'t',tee:'t',tea:'t',u:'u',you:'u',yu:'u',ewe:'u',v:'v',ve:'v',vee:'v',w:'w',x:'x',ex:'x',eks:'x',y:'y',why:'y',wye:'y',z:'z',ze:'z',zee:'z',zed:'z'};
+  function supported(){ return !!(window.SpeechRecognition||window.webkitSpeechRecognition); }
+  function dist(a,b){ var n=a.length,m=b.length,prev=[],cur,i,j; for(j=0;j<=m;j++) prev[j]=j;
+    for(i=1;i<=n;i++){ cur=[i]; for(j=1;j<=m;j++){ cur[j]=Math.min(prev[j]+1,cur[j-1]+1,prev[j-1]+(a[i-1]===b[j-1]?0:1)); } prev=cur; } return prev[m]; }
+  /* each spoken token becomes letters: a letter name ("bee", "are", "double u") is one letter and anything else is split up;
+     a token that could be read either way takes the reading closest to the word; saying the word itself (bee style) is not spelling it */
+  function parse(text,target){ var toks=String(text||'').toLowerCase().split(/[^a-z]+/).filter(Boolean), parts=[], word=false, tg=(target||'').toLowerCase(), i, p;
+    for(i=0;i<toks.length;i++){ var t=toks[i];
+      if(t==='double'&&/^(u|you|yu|ewe)$/.test(toks[i+1]||'')){ parts.push(['w']); i++; continue; }
+      if(t==='doubleu'||t==='doubleyou'){ parts.push(['w']); continue; }
+      if(tg&&t===tg){ word=true; continue; }
+      if(t.length===1){ parts.push([t]); continue; }
+      var split=t.split(''); parts.push(NAMES[t]?[NAMES[t],split]:[split]); }
+    var amb=[]; for(p=0;p<parts.length;p++) if(parts[p].length===2) amb.push(p);
+    var best=null, bestD=Infinity, combos=amb.length<=8?(1<<amb.length):1, tgl=tg.split('');
+    for(var c=0;c<combos;c++){ var L=[]; for(p=0;p<parts.length;p++){ var opt=parts[p], k=amb.indexOf(p); L=L.concat(k<0?opt[0]:(((c>>k)&1)?opt[1]:opt[0])); }
+      var d=tg?dist(L,tgl):0; if(d<bestD){ bestD=d; best=L; } }
+    return {letters:best||[],word:word}; }
+  function letters(){ return fin.concat(tmp); }
+  function target(){ return G.cur?G.cur.w:''; }
+  function render(){ var h=$('heard'), L=letters();
+    if(!L.length) h.innerHTML='<span class="hd-empty">'+(on?'Listening... say the letters one at a time.':'The letters you say will show up here.')+'</span>';
+    else h.innerHTML=fin.map(function(ch){ return '<span class="tile pop">'+esc(ch)+'</span>'; }).join('')+tmp.map(function(ch){ return '<span class="tile dim">'+esc(ch)+'</span>'; }).join('');
+    var b=$('micBtn'); b.classList.toggle('listening',on); b.setAttribute('aria-pressed',on?'true':'false');
+    $('micLabel').textContent=on?'Listening... tap when you are done':(fin.length?'Tap to keep going':'Tap, then spell it out loud'); }
+  function notice(msg){ var n=$('micNotice'); n.textContent=msg; n.hidden=false; }
+  function onResult(id,e){ if(id!==gen) return; var f='', t='', i;
+    for(i=0;i<e.results.length;i++){ var r=e.results[i], s=r[0]?r[0].transcript:''; if(r.isFinal) f+=' '+s; else t+=' '+s; }
+    var pf=parse(f,target()), pt=parse(t,target()); fin=base.concat(pf.letters); tmp=pt.letters; heardWord=pf.word||pt.word; render();
+    var w=target(); if(pf.letters.length&&fin.length>=w.length&&G.phase!=='done'){ clearTimeout(ctimer); ctimer=setTimeout(function(){ if(on&&G.cur&&G.screen==='scr-play'&&G.phase!=='done') check(); },500); }
+    else if(!fin.length&&!tmp.length&&heardWord&&f.trim()) bubble('playBubble','I heard the word. Now say each letter, with a little pause.'); }
+  function onEnd(id){ if(id!==gen) return; on=false; base=fin; tmp=[];
+    if(want&&G.screen==='scr-play'&&G.phase!=='done'&&restarts<30){ restarts++; setTimeout(function(){ if(want&&!on) begin(); },150); } else { want=false; render(); } }
+  function onError(id,e){ if(id!==gen) return; var k=(e&&e.error)||'';
+    if(k==='not-allowed'||k==='service-not-allowed'){ want=false; notice('The microphone is blocked. Allow the mic for this page in the browser, then tap the mic again.'); }
+    else if(k==='audio-capture'){ want=false; notice('No microphone was found. Plug one in, or play Spell It instead.'); }
+    else if(k==='network'){ want=false; notice('Hearing you needs the internet. Check the connection and tap the mic again.'); }
+    else if(k==='no-speech'){ want=false; bubble('playBubble',"I didn't hear anything. Tap the mic and say the letters."); } }
+  function begin(){ var C=window.SpeechRecognition||window.webkitSpeechRecognition; if(!C) return false;
+    var id=++gen; try{ if(rec) rec.abort(); }catch(e){}
+    try{ rec=new C(); rec.lang='en-US'; rec.continuous=true; rec.interimResults=true; rec.maxAlternatives=1;
+      rec.onresult=function(e){ onResult(id,e); }; rec.onend=function(){ onEnd(id); }; rec.onerror=function(e){ onError(id,e); };
+      rec.start(); on=true; want=true; }catch(e){ on=false; want=false; notice('The microphone could not start. Tap the mic to try again.'); render(); return false; }
+    $('micNotice').hidden=true; render(); return true; }
+  function start(){ if(!G.cur||G.phase==='done') return false; Voice.stop(); restarts=0; tmp=[]; return begin(); }
+  /* stop keeps the letters heard so far (the next tap carries on); reset wipes them for a new word */
+  function stop(){ want=false; clearTimeout(ctimer); if(on){ on=false; fin=fin.concat(tmp); base=fin; tmp=[]; gen++; try{ if(rec) rec.abort(); }catch(e){} } render(); }
+  function reset(){ stop(); base=[]; fin=[]; tmp=[]; heardWord=false; $('micNotice').hidden=true; render(); }
+  function toggle(){ if(!G.cur||G.phase==='done') return; SFX.warm();
+    if(on){ stop(); if(letters().length) check(); else bubble('playBubble','Say the letters, then tap the mic again.'); }
+    else if(start()) bubble('playBubble','Go ahead, spell it out loud!'); }
+  return {supported:supported,parse:parse,letters:letters,start:start,stop:stop,reset:reset,toggle:toggle,render:render,get on(){return on;}};
+})();
+
 /* the round */
 var G={screen:'scr-home',mode:'spell',queue:[],idx:0,cur:null,phase:'answer',hinted:0,retry:[],stats:null,streak:0,timer:null,tileLetters:[],tileSel:[]};
 function show(id){ if(PICKING&&id!=='scr-home') endPick(); ['scr-profiles','scr-home','scr-play','scr-words','scr-summary'].forEach(function(s){ $(s).hidden=(s!==id); }); G.screen=id; $('app').setAttribute('data-screen',id); $('main').scrollTop=0; }
@@ -2013,12 +2088,13 @@ function buildQueue(only){
   return shuffle(p.slice(0,n).map(function(x){return x.w;}));
 }
 function startRound(mode,only){
+  if(mode==='say'&&!Say.supported()){ toast("This browser can't hear you. Try Chrome, Edge, or Safari for Say It."); return; }
   clearTimeout(G.timer); clearTimeout(G.vtimer);
   G.mode=mode; G.queue=buildQueue(only).map(function(w){return {w:w,retry:false,status:''};}); G.idx=0; G.retry=[]; G.streak=0;
   G.stats={first:0,fixed:0,missed:[],pearls:0,best:0,n:G.queue.length};
   if(!G.queue.length){ toast('No words to practice with these settings.'); return; }
   updateStreak(); show('scr-play'); setMood('neutral');
-  var tiles=(mode==='tiles'); $('app').setAttribute('data-mode',mode); $('tileArea').hidden=!tiles; $('spellForm').hidden=tiles; $('clearBtn').hidden=!tiles;
+  var tiles=(mode==='tiles'), say=(mode==='say'); $('app').setAttribute('data-mode',mode); $('tileArea').hidden=!tiles; $('sayArea').hidden=!say; $('spellForm').hidden=(tiles||say); $('clearBtn').hidden=!(tiles||say);
   $('voiceNotice').hidden=Voice.ok;
   nextWord();
 }
@@ -2036,25 +2112,29 @@ function nextWord(){
   bubble('playBubble', item.retry?"Let's get this one!":pick(W().listen));
   setMood('neutral');
   var inp=$('spellInput'); inp.value=''; inp.readOnly=false; inp.placeholder='type the word'; inp.className='spell-input';
-  if(G.mode==='tiles'){ setupTiles(G.cur.w); if(isPhone()) setTimeout(function(){ try{ $('checkBtn').scrollIntoView({block:'end'}); }catch(e){} },60); } else { refocus(); if(isPhone()) setTimeout(function(){ try{ $('spellInput').scrollIntoView({block:'center'}); }catch(e){} },60); }
+  if(G.mode==='say'){ Say.reset(); if(isPhone()) setTimeout(function(){ try{ $('micBtn').scrollIntoView({block:'center'}); }catch(e){} },60); }
+  else if(G.mode==='tiles'){ setupTiles(G.cur.w); if(isPhone()) setTimeout(function(){ try{ $('checkBtn').scrollIntoView({block:'end'}); }catch(e){} },60); } else { refocus(); if(isPhone()) setTimeout(function(){ try{ $('spellInput').scrollIntoView({block:'center'}); }catch(e){} },60); }
   if(!Voice.ok){ showInfo('<b>Meaning:</b> '+esc(G.cur.d)); }
   G.vtimer=setTimeout(function(){ if(G.cur&&G.screen==='scr-play'){ Voice.full(G.cur); speakPulse(); } },450);
 }
-function refocus(){ if(G.mode!=='tiles'&&G.phase!=='done'){ try{ $('spellInput').focus({preventScroll:true}); }catch(e){} } }
+function refocus(){ if(G.mode==='spell'&&G.phase!=='done'){ try{ $('spellInput').focus({preventScroll:true}); }catch(e){} } }
 function showInfo(html){ $('infoBox').innerHTML=html; $('infoBox').hidden=false; }
 function renderDots(){ $('dots').innerHTML=G.queue.map(function(it,i){ return '<span class="dot '+it.status+(i===G.idx?' now':'')+'"></span>'; }).join(''); }
 function updateStreak(){ $('streakCount').textContent=G.streak; $('streakStat').classList.toggle('hot',G.streak>=3); }
-function currentAnswer(){ if(G.mode==='tiles') return G.tileSel.map(function(i){return G.tileLetters[i];}).join(''); return $('spellInput').value.trim().replace(/[^a-zA-Z]/g,''); }
+/* a word is only mastered by spelling it: typed in Spell It or said out loud in Say It, never by tapping tiles */
+function masteryMode(){ return G.mode==='spell'||G.mode==='say'; }
+function currentAnswer(){ if(G.mode==='say') return Say.letters().join(''); if(G.mode==='tiles') return G.tileSel.map(function(i){return G.tileLetters[i];}).join(''); return $('spellInput').value.trim().replace(/[^a-zA-Z]/g,''); }
 function check(){ clearTimeout(G.ttimer);
   if(G.phase==='done'||!G.cur) return;
+  if(G.mode==='say') Say.stop();
   var ans=currentAnswer();
-  if(!ans){ bubble('playBubble', G.mode==='tiles'?'Tap the letters first!':'Type the word first!'); SFX.tick(); refocus(); return; }
+  if(!ans){ bubble('playBubble', G.mode==='tiles'?'Tap the letters first!':G.mode==='say'?'Tap the mic and say the letters first!':'Type the word first!'); SFX.tick(); refocus(); return; }
   if(ans.toLowerCase()===G.cur.w.toLowerCase()) onCorrect(); else onWrong(ans);
 }
 function onCorrect(){ clearTimeout(G.vtimer);
   var w=G.cur, st=wstat(w.w), item=G.queue[G.idx], gain=0, ms=null, lv0=levelFor(SW().pearls), was=isMastered(st);
   if(G.phase==='answer'){
-    gain=item.retry?3:(G.hinted?5:10); if(!item.retry) G.streak++; if(G.mode!=='tiles'){ if(!G.hinted) st.streak++; if(st.streak>=3) st.mastered=true; } st.right++; S.totalCorrect++;
+    gain=item.retry?3:(G.hinted?5:10); if(!item.retry) G.streak++; if(masteryMode()){ if(!G.hinted) st.streak++; if(st.streak>=3) st.mastered=true; } st.right++; S.totalCorrect++;
     if(G.streak>S.bestStreak) S.bestStreak=G.streak; if(G.streak>G.stats.best) G.stats.best=G.streak;
     item.status=item.retry?'retry':'first'; if(item.retry) G.stats.fixed++; else G.stats.first++;
     ms=item.retry?null:W().milestones[G.streak];
@@ -2077,7 +2157,7 @@ function onWrong(ans){ clearTimeout(G.vtimer);
   var w=G.cur, st=wstat(w.w), item=G.queue[G.idx];
   SFX.wrong(); setMood('oops'); shake('axoPlay');
   if(G.phase==='answer'){
-    G.streak=0; if(G.mode!=='tiles') st.streak=0; st.wrong++; updateStreak();
+    G.streak=0; if(masteryMode()) st.streak=0; st.wrong++; updateStreak();
     item.status='miss'; renderDots();
     if(G.stats.missed.indexOf(w)<0) G.stats.missed.push(w);
     if(!item.retry) G.retry.push(w);
@@ -2086,8 +2166,9 @@ function onWrong(ans){ clearTimeout(G.vtimer);
   showDiff(ans,w.w); revealFeedback();
   $('hintStrip').hidden=true; $('infoBox').hidden=true;
   $('lockinBox').hidden=false;
-  $('lockinBox').innerHTML='<div class="lock-label">Now spell it to lock it in</div><div class="lock-word">'+esc(w.w)+'</div>';
+  $('lockinBox').innerHTML='<div class="lock-label">'+(G.mode==='say'?'Now spell it out loud to lock it in':'Now spell it to lock it in')+'</div><div class="lock-word">'+esc(w.w)+'</div>';
   if(G.mode==='tiles'){ setupTiles(w.w); }
+  else if(G.mode==='say'){ Say.reset(); }
   else { var inp=$('spellInput'); inp.value=''; inp.placeholder=w.w; inp.className='spell-input bad'; setTimeout(function(){ inp.className='spell-input'; refocus(); },500); }
   setTimeout(function(){ if(G.cur===w&&G.screen==='scr-play') Voice.spell(w); },300);
   save();
@@ -2127,6 +2208,7 @@ function renderTiles(){
 function pickTile(i){ if(G.phase==='done'||G.tileSel.indexOf(i)>=0||G.tileSel.length>=G.cur.w.length) return; G.tileSel.push(i); SFX.pop(); renderTiles(); clearTimeout(G.ttimer); if(G.tileSel.length===G.cur.w.length) G.ttimer=setTimeout(function(){ if(G.cur&&G.screen==='scr-play'&&G.tileSel.length===G.cur.w.length) check(); },260); }
 function unpickSlot(i){ if(G.phase==='done'||i>=G.tileSel.length) return; clearTimeout(G.ttimer); G.tileSel.splice(i,1); SFX.tick(); renderTiles(); }
 function tileKey(e){ if(e.ctrlKey||e.metaKey||e.altKey) return;
+  if(G.screen==='scr-play'&&G.mode==='say'&&G.phase!=='done'&&e.key==='Enter'&&!(e.target&&e.target.tagName==='BUTTON')){ check(); return; }
   if(G.screen!=='scr-play'||G.mode!=='tiles'||G.phase==='done') return;
   if(e.key==='Backspace'){ if(G.tileSel.length){ G.tileSel.pop(); SFX.tick(); renderTiles(); } e.preventDefault(); return; }
   if(e.key==='Enter'){ if(e.target&&e.target.tagName==='BUTTON') return; check(); return; }
@@ -2225,7 +2307,7 @@ function renderProfiles(){ var keepS=S, keepK=K_INK, html='';
   PLAYERS.forEach(function(p){ S=playerState(p.id); K_INK=WORLDS[world()].ink; var lv=levelFor(SW().pearls);
     html+='<button type="button" class="profile-card'+(p.id===(P.current||P.last)?' on':'')+'" data-id="'+p.id+'"'+(LOADED?'':' disabled')+'>'+axoSVG({plain:true,mood:'happy'})+'<span class="pc-name">'+esc(p.name)+'</span><span class="pc-sub">'+(LOADED?'Level '+lv:'Loading...')+'</span></button>'; });
   S=keepS; K_INK=keepK; $('profileGrid').innerHTML=html; }
-function showProfiles(){ clearTimeout(G.timer); clearTimeout(G.vtimer); clearTimeout(G.ttimer); Voice.stop(); G.cur=null; renderProfiles(); show('scr-profiles'); }
+function showProfiles(){ clearTimeout(G.timer); clearTimeout(G.vtimer); clearTimeout(G.ttimer); Voice.stop(); Say.reset(); G.cur=null; renderProfiles(); show('scr-profiles'); }
 function selectProfile(id){ var p=profileById(id); if(!p||!LOADED) return; P.current=id; wordSel=null; wordFilter='all'; $('wordDetail').innerHTML='<p class="hint-text">Tap a word to hear it and see what it means.</p>'; loadState(id); S.kid=p.name; save(); applyWorld(); renderSound(); renderHome(); show('scr-home'); }
 /* hover previews: show a world's whole look without changing anything */
 function previewWorld(w,st){ var keepS=S; if(st) S=st; PREVIEW=w;
@@ -2275,7 +2357,7 @@ function setGrade(g){ if(g===S.grade) return; S.grade=g; S.gradePicked=true; sav
   applyWorld(); renderHome(); if(G.screen==='scr-words') renderWords(); SFX.warm(); SFX.pop(); jump('axoHome'); toast(W().brand+': '+gradeName()+' words'); }
 function renderSound(){ $('soundBtn').classList.toggle('off',!S.sound); $('soundBtn').setAttribute('aria-label','Sound effects '+(S.sound?'on':'off'));
   var w=document.querySelectorAll('#soundBtn .wave'); for(var i=0;i<w.length;i++) w[i].style.display=S.sound?'':'none'; }
-function goHome(){ clearTimeout(G.timer); clearTimeout(G.vtimer); clearTimeout(G.ttimer); Voice.stop(); G.cur=null; G.streak=0; updateStreak(); setMood('neutral'); renderHome(); show('scr-home'); }
+function goHome(){ clearTimeout(G.timer); clearTimeout(G.vtimer); clearTimeout(G.ttimer); Voice.stop(); Say.reset(); G.cur=null; G.streak=0; updateStreak(); setMood('neutral'); renderHome(); show('scr-home'); }
 
 /* wiring */
 var modes=document.querySelectorAll('.mode-btn');
@@ -2303,7 +2385,8 @@ $('hearBtn').addEventListener('click',function(){ if(G.cur){ Voice.full(G.cur); 
 $('sentBtn').addEventListener('click',function(){ if(!G.cur) return; Voice.sentence(G.cur); showInfo('<b>Sentence:</b> '+esc(G.cur.s.replace(new RegExp(G.cur.w,'ig'),'____'))); refocus(); });
 $('meanBtn').addEventListener('click',function(){ if(!G.cur) return; Voice.meaning(G.cur); showInfo('<b>Meaning:</b> '+esc(G.cur.d)); refocus(); });
 $('hintBtn').addEventListener('click',hint);
-$('clearBtn').addEventListener('click',function(){ if(G.mode==='tiles'&&G.phase!=='done'){ clearTimeout(G.ttimer); G.tileSel=[]; renderTiles(); SFX.tick(); } });
+$('clearBtn').addEventListener('click',function(){ if(G.mode==='tiles'&&G.phase!=='done'){ clearTimeout(G.ttimer); G.tileSel=[]; renderTiles(); SFX.tick(); } else if(G.mode==='say'&&G.phase!=='done'){ Say.reset(); SFX.tick(); } });
+$('micBtn').addEventListener('click',function(){ Say.toggle(); });
 $('tiles').addEventListener('click',function(e){ var b=e.target.closest('.tile.pick'); if(b&&!b.disabled) pickTile(parseInt(b.getAttribute('data-i'),10)); });
 $('slots').addEventListener('click',function(e){ var b=e.target.closest('.tile.slot'); if(b) unpickSlot(parseInt(b.getAttribute('data-i'),10)); });
 document.addEventListener('keydown',tileKey);
@@ -2327,11 +2410,11 @@ if(HOVER){
   s.style.cssText='left:'+(Math.random()*100)+'%;width:'+size+'px;height:'+size+'px;--c:'+cols[i%5]+';animation-duration:'+(10+Math.random()*13)+'s;animation-delay:'+(-Math.random()*22)+'s;'; b.appendChild(s); } })();
 
 /* small handle for automated tests */
-window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},world:world,save:save,startRound:startRound,levelFor:levelFor,SW:SW,charKey:charKey,migrateChars:migrateChars,WORDS3:WORDS3,WORDS4:WORDS4,net:Net,selectProfile:selectProfile,get ONLINE(){return ONLINE;},get LIVE(){return LIVE;}};
+window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},world:world,save:save,startRound:startRound,levelFor:levelFor,SW:SW,charKey:charKey,migrateChars:migrateChars,WORDS3:WORDS3,WORDS4:WORDS4,net:Net,selectProfile:selectProfile,say:Say,get ONLINE(){return ONLINE;},get LIVE(){return LIVE;}};
 /* redraw after the online copy changed under this page */
 function refreshView(){ $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
-var BUILD='2026-10-01.2';
+var BUILD='2026-10-01.3';
 function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
   fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
     if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }

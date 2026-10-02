@@ -622,6 +622,76 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     ok(await page.$eval('.profile-card[data-id="amy"] .pc-sub', e => e.textContent) === 'Level 20', 'the player card shows the level of the character being played');
   }
 
+  console.log('12k. Say It: spell the word out loud (fake microphone)');
+  {
+    await page.evaluateOnNewDocument(() => {
+      window.__recs = [];
+      function Fake() { this.started = false; window.__recs.push(this); }
+      Fake.prototype.start = function () { this.started = true; };
+      Fake.prototype.stop = Fake.prototype.abort = function () { const s = this; if (!s.started) return; s.started = false; setTimeout(() => { s.onend && s.onend({}); }, 0); };
+      window.SpeechRecognition = Fake;
+      window.__hear = parts => { const r = window.__recs[window.__recs.length - 1]; if (!r || !r.started) return false; const results = parts.map(p => { const a = [{ transcript: p.t, confidence: 0.9 }]; a.isFinal = !!p.f; return a; }); r.onresult({ resultIndex: 0, results }); return true; };
+      window.__micError = code => { const r = window.__recs[window.__recs.length - 1]; if (!r || !r.started) return false; r.onerror({ error: code }); r.started = false; setTimeout(() => { r.onend && r.onend({}); }, 0); return true; };
+    });
+    await page.reload({ waitUntil: 'load' }); await sleep(600);
+    await page.click('.profile-card[data-id="riley"]'); await sleep(500);
+    ok(await count('.mode-btn') === 4 && await text('.mode-btn[data-mode="say"] .mode-name') === 'Say It', 'home has a fourth mode, Say It');
+    const sayRound = word => page.evaluate(word => { const w = __spelling.WORDS3.concat(__spelling.WORDS4).find(x => x.w === word); __spelling.startRound('say', [w]); }, word);
+    const hear = parts => page.evaluate(parts => window.__hear(parts), parts);
+    const listening = () => page.$eval('#micBtn', el => el.classList.contains('listening'));
+    const quit = async () => { await page.evaluate(() => document.getElementById('quitBtn').click()); await sleep(300); };
+    await page.click('.mode-btn[data-mode="say"]'); await sleep(600);
+    ok(await visible('#sayArea') && !(await visible('#spellForm')) && !(await visible('#tileArea')) && await visible('#clearBtn'), 'Say It shows the mic, not the keyboard or tiles');
+    ok(!(await listening()), 'the mic is off until the kid taps it');
+    await sayRound('bamboo'); await sleep(200);
+    const s0 = await page.evaluate(() => (__spelling.S.words.bamboo || { streak: 0 }).streak || 0), p0 = (await T()).pearls;
+    await page.click('#micBtn'); await sleep(100);
+    ok(await listening() && /Listening/.test(await text('#micLabel')), 'tapping the mic starts listening');
+    ok(await hear([{ t: 'B A M', f: true }, { t: 'B O', f: false }]), 'the fake mic delivers results');
+    ok(await count('#heard .tile') === 5 && await count('#heard .tile.dim') === 2 && (await T()).phase === 'answer', 'letters show up as they are heard, the unfinished ones faded');
+    await hear([{ t: 'B A M B O O', f: true }]); await sleep(800);
+    let t = await T();
+    ok(t.phase === 'done' && t.pearls === p0 + 10, 'the right letters are checked on their own (+10)');
+    ok(!(await listening()), 'the mic turns off after the check');
+    ok(await page.evaluate(() => __spelling.S.words.bamboo.streak) === s0 + 1, 'Say It counts toward mastery');
+    await quit();
+    await sayRound('kelp'); await page.click('#micBtn'); await hear([{ t: 'kay E el pee', f: true }]); await sleep(800);
+    ok((await T()).phase === 'done', 'letter names like "kay" and "pee" are heard as letters');
+    await quit();
+    await sayRound('lunar'); await page.click('#micBtn'); await hear([{ t: 'lunar L U N A R lunar', f: true }]); await sleep(800);
+    ok((await T()).phase === 'done', 'saying the word before and after the letters, bee style, is fine');
+    await quit();
+    await sayRound('lunar'); await page.click('#micBtn'); await hear([{ t: 'lunar', f: true }]); await sleep(800);
+    ok((await T()).phase === 'answer' && await count('#heard .tile') === 0 && /each letter/.test(await text('#playBubble')), 'just saying the word is not spelling it');
+    await page.click('#micBtn'); await sleep(100);
+    ok((await T()).phase === 'answer' && /Say the letters/.test(await text('#playBubble')), 'tapping the mic with nothing heard asks for letters');
+    await quit();
+    await sayRound('kelp'); await page.click('#micBtn'); await hear([{ t: 'K E L B', f: true }]); await sleep(800);
+    t = await T();
+    ok(t.phase === 'lockin' && await count('#resultBox .tile.bad') === 1 && /out loud/.test(await text('#lockinBox')), 'a wrong spelling shows the diff and asks to spell it out loud again');
+    ok(await count('#heard .tile') === 0 && !(await listening()), 'the heard letters clear for the lock-in');
+    await page.click('#micBtn'); await hear([{ t: 'K E L P', f: true }]); await sleep(800);
+    ok((await T()).phase === 'done', 'spelling it out loud locks it in');
+    await quit();
+    await sayRound('bamboo'); await page.click('#micBtn'); await hear([{ t: 'B A', f: true }]); await sleep(200);
+    await page.click('#clearBtn'); await sleep(100);
+    ok(await count('#heard .tile') === 0 && (await T()).phase === 'answer', 'Clear wipes the heard letters');
+    await page.click('#micBtn'); await sleep(100); await page.evaluate(() => window.__micError('not-allowed')); await sleep(200);
+    ok(await visible('#micNotice') && /blocked/.test(await text('#micNotice')) && !(await listening()), 'a blocked mic explains itself');
+    const s1 = await page.evaluate(() => __spelling.S.words.bamboo.streak);
+    await page.click('#hintBtn'); await sleep(200);
+    await page.click('#micBtn'); await hear([{ t: 'B A M B O O', f: true }]); await sleep(800);
+    ok((await T()).phase === 'done' && await page.evaluate(() => __spelling.S.words.bamboo.streak) === s1, 'a hinted Say It answer does not count toward mastery');
+    await quit();
+    const P = (s, w) => page.evaluate((s, w) => __spelling.say.parse(s, w).letters.join(''), s, w);
+    ok(await P('sea L', 'seal') === 'seal' && await P('see a tea', 'cat') === 'cat' && await P('double you', 'w') === 'w' && await P('B-A-M.', 'bamboo') === 'bam' && await P('kay eye tea ee', 'kite') === 'kite' && await P('are you', 'ru') === 'ru', 'spoken letters are read the way that best fits the word');
+    const saySweep = await page.evaluate(() => { const H = __spelling, bad = []; for (const w of H.WORDS3.concat(H.WORDS4)) { H.startRound('say', [w]); document.getElementById('micBtn').click(); window.__hear([{ t: w.w.toUpperCase().split('').join(' '), f: true }]); document.getElementById('checkBtn').click(); if (H.G.phase !== 'done') bad.push(w.w); } document.getElementById('quitBtn').click(); return bad; });
+    ok(saySweep.length === 0, 'every word in both lists can be spelled out loud' + (saySweep.length ? ': ' + saySweep.slice(0, 8).join(', ') : ''));
+    await sleep(300);
+    ok(await page.evaluate(() => { const F = window.SpeechRecognition; window.SpeechRecognition = undefined; __spelling.startRound('say'); const r = __spelling.G.screen === 'scr-home' && !document.getElementById('toast').hidden; window.SpeechRecognition = F; return r; }), 'a browser without speech recognition is told so and stays home');
+    ok(await page.evaluate(() => { const w = __spelling.WORDS3.find(x => x.w === 'bamboo'); __spelling.S.words.bamboo = { mastered: false, streak: 2, right: 2, wrong: 0, seen: 2 }; __spelling.startRound('tiles', [w]); const G = __spelling.G, used = []; G.tileSel = w.w.split('').map(ch => { for (let i = 0; i < G.tileLetters.length; i++) { if (G.tileLetters[i] === ch && used.indexOf(i) < 0) { used.push(i); return i; } } return -1; }); document.getElementById('checkBtn').click(); const st = __spelling.S.words.bamboo; document.getElementById('quitBtn').click(); return G.phase === 'done' && st.streak === 2 && !st.mastered; }), 'Tile Time still never masters a word');
+  }
+
   console.log('13. Errors');
   ok(errors.length === 0, 'no page errors' + (errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''));
   await browser.close();
