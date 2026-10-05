@@ -407,8 +407,8 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 .shop-item.on .si-price{color:var(--good)}
 .shop-item .si-swatch{width:70px;height:70px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--sky-soft),var(--good-soft));border:3px solid var(--line);font-family:var(--display),sans-serif;font-weight:700;font-size:1.8rem;color:var(--ink-soft)}
 .shop-item.owned .si-swatch{border-color:var(--good);color:var(--good)}
-.shop-item .btn-sm{padding:6px 12px;font-size:.85rem;white-space:normal}
-.shop-item .si-peek{padding:3px 10px;font-size:.78rem}
+.shop-item .btn-sm{padding:8px 14px;min-height:38px;font-size:.85rem;white-space:normal}
+.shop-item .si-peek{padding:6px 12px;min-height:36px;font-size:.78rem}
 .settings label{display:flex;align-items:center;gap:10px;font-weight:700;margin-bottom:10px;flex-wrap:wrap}
 .settings select{font:inherit;font-weight:700;padding:8px 12px;border-radius:12px;border:2px solid var(--line);background:var(--surface-2);color:var(--ink)}
 .settings input[type=checkbox]{width:22px;height:22px;accent-color:var(--good)}
@@ -2656,7 +2656,7 @@ window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},voic
 /* redraw after the online copy changed under this page */
 function refreshView(){ migrateStore(S); $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
-var BUILD='2026-10-04.4';
+var BUILD='2026-10-04.5';
 function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
   fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
     if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }
