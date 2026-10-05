@@ -6,7 +6,7 @@ let fails = 0, passes = 0;
 function ok(cond, msg) { if (cond) { passes++; console.log('  ok   ' + msg); } else { fails++; console.log('  FAIL ' + msg); } }
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 (async () => {
-  const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--mute-audio', '--disable-speech-api', '--disable-gpu'] });
+  const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--mute-audio', '--disable-speech-api', '--disable-gpu', '--allow-file-access-from-files', '--autoplay-policy=no-user-gesture-required'] });
   const page = await browser.newPage();
   const cloud = require('./mockcloud').create(); await cloud.attach(page);
   const errors = [];
@@ -644,15 +644,17 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
       const android = V.pickVoice([mk('English United States', 'en-US'), mk('Deutsch', 'de-DE')]).name;
       const male = V.pickVoice([mk('Microsoft Mark', 'en-US'), mk('Alex', 'en-US')]);
       return win === 'Microsoft Aria Online (Natural)' && ios === 'Samantha' && android === 'English United States' && male && male.name === 'Microsoft Mark'; }), 'the voice is a woman, natural when there is one: Aria on Windows, Samantha on iPhone, the plain English voice on Android, and a man only when there is nothing else');
-    const sayRound = async word => { await page.evaluate(word => { const w = __spelling.WORDS3.concat(__spelling.WORDS4).find(x => x.w === word); __spelling.startRound('say', [w]); }, word); await sleep(950); };
     const hear = parts => page.evaluate(parts => window.__hear(parts), parts);
     const listening = () => page.$eval('#micBtn', el => el.classList.contains('listening'));
+    const waitMic = async () => { for (let i = 0; i < 50; i++) { if (await listening()) return true; await sleep(100); } return false; };
+    /* the word's recording plays first, then the mic turns on by itself */
+    const sayRound = async word => { await page.evaluate(word => { const w = __spelling.WORDS3.concat(__spelling.WORDS4).find(x => x.w === word); __spelling.startRound('say', [w]); }, word); await waitMic(); };
     const quit = async () => { await page.evaluate(() => document.getElementById('quitBtn').click()); await sleep(300); };
     const confirm = async () => { await page.click('#checkBtn'); await sleep(250); };
     await page.click('.mode-btn[data-mode="say"]'); await sleep(600);
     ok(await visible('#sayArea') && !(await visible('#spellForm')) && !(await visible('#tileArea')) && await text('#clearBtn') === 'Say it again', 'Say It shows the mic and a Say it again button');
     ok(!(await listening()), 'the mic waits while the word is read');
-    await sleep(400); ok(await listening(), 'then turns on by itself');
+    ok(await waitMic(), 'then turns on by itself once the word has been read');
     await sayRound('bamboo');
     const s0 = await page.evaluate(() => (__spelling.S.words.bamboo || { streak: 0 }).streak || 0), p0 = (await T()).pearls;
     ok(await listening() && /Listening/.test(await text('#micLabel')), 'a new word starts listening on its own');
@@ -716,6 +718,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     await quit(); await sayRound('bamboo');
     const s1 = await page.evaluate(() => __spelling.S.words.bamboo.streak);
     await page.click('#hintBtn'); await sleep(200);
+    ok(!(await listening()), 'a hint turns the mic off while the hint is read');
+    ok(await waitMic(), 'and the mic comes back by itself after it');
     await hear([{ t: 'B A M B O O', f: true }]); await sleep(100); await confirm();
     ok((await T()).phase === 'done' && await page.evaluate(() => __spelling.S.words.bamboo.streak) === s1, 'a hinted Say It answer does not count toward mastery');
     await quit();
@@ -762,6 +766,28 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     ok(kbSweep.length === 0, 'every word in both lists can be spelled with voice typing' + (kbSweep.length ? ': ' + kbSweep.slice(0, 8).join(', ') : ''));
     await sleep(300);
     ok(await page.evaluate(() => { const w = __spelling.WORDS3.find(x => x.w === 'bamboo'); __spelling.S.words.bamboo = { mastered: false, streak: 2, right: 2, wrong: 0, seen: 2 }; __spelling.startRound('tiles', [w]); const G = __spelling.G, used = []; G.tileSel = w.w.split('').map(ch => { for (let i = 0; i < G.tileLetters.length; i++) { if (G.tileLetters[i] === ch && used.indexOf(i) < 0) { used.push(i); return i; } } return -1; }); document.getElementById('checkBtn').click(); const st = __spelling.S.words.bamboo; document.getElementById('quitBtn').click(); return G.phase === 'done' && st.streak === 2 && !st.mastered; }), 'Tile Time still never masters a word');
+  }
+
+  console.log('12m. The recorded voice');
+  {
+    const fs = require('fs'), A = path.join(path.dirname(path.resolve(process.argv[2])), 'audio');
+    const missing = [], small = [];
+    for (const [g, L] of [['3', await page.evaluate(() => __spelling.WORDS3)], ['4', await page.evaluate(() => __spelling.WORDS4)]]) for (const w of L) for (const k of ['word', 'sentence', 'meaning', 'spell']) { const f = path.join(A, 'w', g, w.w.toLowerCase() + '-' + k + '.mp3'); if (!fs.existsSync(f)) missing.push(g + '/' + w.w + '-' + k); else if (fs.statSync(f).size < 1000) small.push(w.w + '-' + k); }
+    for (const c of 'abcdefghijklmnopqrstuvwxyz') if (!fs.existsSync(path.join(A, 'letters', c + '.mp3'))) missing.push('letter ' + c);
+    if (!fs.existsSync(path.join(A, 'phrases', 'starts.mp3'))) missing.push('phrases/starts');
+    ok(missing.length === 0 && small.length === 0, 'every word has its four recordings, plus the letters and "It starts with"' + (missing.length ? ': missing ' + missing.slice(0, 6).join(', ') : '') + (small.length ? ': too small ' + small.slice(0, 6).join(', ') : ''));
+    const total = (() => { let n = 0; const walk = d => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, e.name); if (e.isDirectory()) walk(p); else n += fs.statSync(p).size; } }; walk(A); return n; })();
+    ok(total < 16 * 1024 * 1024, 'the recordings together stay under 16 MB (' + (total / 1048576).toFixed(1) + ' MB)');
+    await page.evaluate(() => __spelling.selectProfile('riley')); await sleep(400);
+    const heard = await page.evaluate(() => new Promise(res => { const w = __spelling.WORDS3.find(x => x.w === 'bamboo'); const t0 = Date.now(); const went = __spelling.voice.word(w, () => res({ went, ms: Date.now() - t0 })); setTimeout(() => res({ went, ms: -1 }), 6000); }));
+    ok(heard.went === true && heard.ms > 300 && heard.ms < 5000, 'a word plays from its recording and says when it is done (' + heard.ms + ' ms)');
+    const full = await page.evaluate(() => new Promise(res => { const w = __spelling.WORDS3.find(x => x.w === 'bamboo'); const t0 = Date.now(); __spelling.voice.clip(['w/3/bamboo-word', 'w/3/bamboo-word'], 300, 'bamboo', 0.8, () => res(Date.now() - t0)); setTimeout(() => res(-1), 8000); }));
+    ok(full > heard.ms + 300, 'clips in a row play one after another with a gap (' + full + ' ms)');
+    const miss = await page.evaluate(() => new Promise(res => { const r = __spelling.voice.clip(['w/3/not-a-word-word'], 0, 'nothing', 0.8, () => res('spoke')); setTimeout(() => res(r === false ? 'fell back quietly' : 'stuck'), 2500); }));
+    ok(miss !== 'stuck', 'a missing recording falls back to the device voice, or reports done when there is none, without an error (' + miss + ')');
+    const cut = await page.evaluate(() => new Promise(res => { const w = __spelling.WORDS3.find(x => x.w === 'bamboo'); let ended = false; __spelling.voice.word(w, () => { ended = true; }); setTimeout(() => { __spelling.voice.stop(); }, 100); setTimeout(() => res(ended), 1500); }));
+    ok(cut === false, 'stopping cuts a recording off without reporting it done');
+    await page.evaluate(() => document.getElementById('switchBtn').click()); await sleep(300);
   }
 
   console.log('13. Errors');

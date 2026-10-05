@@ -1325,6 +1325,28 @@ var SFX=(function(){
 })();
 
 /* the voice that reads each word aloud */
+/* recorded voice: natural recordings of every word (the word, its sentence, its meaning, and it spelled out), the letters and the
+   summary lines, made by tools/make-audio.py and played through WebAudio (unlocked by the same taps as the sound effects);
+   the device's own voice is only the fallback */
+var Clips=(function(){
+  var ctx=null, cache={}, cur=null, gen=0;
+  function ac(){ try{ if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); if(ctx.state!=='running') ctx.resume(); }catch(e){ return null; } return ctx; }
+  function load(path){ if(cache[path]) return cache[path];
+    var p=new Promise(function(res,rej){ var a=ac(); if(!a) return rej(new Error('no audio'));
+      var x=new XMLHttpRequest(); x.open('GET','audio/'+path+'.mp3'); x.responseType='arraybuffer';
+      x.onload=function(){ if((x.status&&x.status!==200)||!x.response||x.response.byteLength<200) return rej(new Error('missing '+path)); a.decodeAudioData(x.response.slice(0),res,function(){ rej(new Error('decode '+path)); }); };
+      x.onerror=function(){ rej(new Error('net '+path)); }; x.send(); });
+    cache[path]=p; p.catch(function(){ delete cache[path]; }); return p; }
+  function stop(){ gen++; if(cur){ try{ cur.onended=null; cur.stop(); }catch(e){} cur=null; } }
+  /* plays clips one after another; done(true) at the end, done(false) right away if one is missing (the caller then uses the device voice) */
+  function play(paths,gap,done){ stop(); var a=ac(), my=gen, i=0; if(!a){ if(done) done(false); return false; }
+    function next(){ if(my!==gen) return; if(i>=paths.length){ if(done) done(true); return; }
+      load(paths[i]).then(function(buf){ if(my!==gen) return; var s=a.createBufferSource(); s.buffer=buf; s.connect(a.destination);
+        s.onended=function(){ if(my!==gen||cur!==s) return; cur=null; i++; if(i<paths.length) setTimeout(next,gap||0); else if(done) done(true); };
+        cur=s; try{ s.start(); }catch(e){ cur=null; if(done) done(false); } },function(){ if(my!==gen) return; if(done) done(false); }); }
+    next(); return true; }
+  return { warm:function(){ ac(); }, stop:stop, play:play, preload:function(paths){ try{ if(ac()) paths.forEach(function(p){ load(p).catch(function(){}); }); }catch(e){} } };
+})();
 var Voice=(function(){
   var ok=('speechSynthesis' in window)&&('SpeechSynthesisUtterance' in window);
   var voice=null;
@@ -1339,16 +1361,25 @@ var Voice=(function(){
   function pickVoice(vs){ var best=null, bs=-Infinity; for(var k=0;k<vs.length;k++){ var sc=score(vs[k]); if(sc===-1) continue; if(sc>bs){ bs=sc; best=vs[k]; } } return best; }
   function choose(){ if(!ok) return; var vs=speechSynthesis.getVoices(); if(!vs||!vs.length) return; voice=pickVoice(vs); }
   if(ok){ choose(); try{ speechSynthesis.onvoiceschanged=choose; }catch(e){} }
-  function say(text,rate,done){ if(!ok) return false; try{ if(typeof Say!=='undefined'&&Say&&Say.on) Say.stop(); }catch(e){} try{ var busy=speechSynthesis.speaking||speechSynthesis.pending; if(busy) speechSynthesis.cancel();
+  function say(text,rate,done){ Clips.stop(); if(!ok) return false; try{ if(typeof Say!=='undefined'&&Say&&Say.on) Say.stop(); }catch(e){} try{ var busy=speechSynthesis.speaking||speechSynthesis.pending; if(busy) speechSynthesis.cancel();
     var u=new SpeechSynthesisUtterance(text); if(done){ u.onend=function(){ done(); }; u.onerror=function(){ done(); }; } u.rate=rate||0.88; u.pitch=1.12; u.lang='en-US'; if(voice) u.voice=voice; if(busy) setTimeout(function(){ try{ speechSynthesis.speak(u); }catch(e){} },80); else speechSynthesis.speak(u); }catch(e){ return false; } return true; }
-  return { ok:ok, say:say, pickVoice:pickVoice,
-    warm:function(){ if(!ok) return; try{ speechSynthesis.speak(new SpeechSynthesisUtterance('')); }catch(e){} },
-    stop:function(){ if(!ok) return; try{ speechSynthesis.cancel(); }catch(e){} },
-    word:function(w,done){ return say(w.w,0.75,done); },
-    sentence:function(w){ say(w.s,0.9); },
-    full:function(w){ say(w.w+'. '+w.s+' '+w.w+'.',0.85); },
-    meaning:function(w){ say(w.w+' means '+w.d+'.',0.9); },
-    spell:function(w,done){ return say(w.w+'. '+w.w.toUpperCase().split('').join(', ')+'. '+w.w+'.',0.8,done); }
+  function wp(w,kind){ return 'w/'+(WORDS3.indexOf(w)>=0?'3':'4')+'/'+w.w.toLowerCase()+'-'+kind; }
+  function slug(t){ return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60); }
+  /* a recording first; if it is missing or audio is blocked, the device voice says the same words */
+  function clip(paths,gap,text,rate,done){ try{ if(typeof Say!=='undefined'&&Say&&Say.on) Say.stop(); }catch(e){} if(ok){ try{ speechSynthesis.cancel(); }catch(e){} }
+    var went=Clips.play(paths,gap,function(played){ if(played){ if(done) done(); } else if(!say(text,rate,done)&&done) done(); });
+    return went||say(text,rate,done); }
+  return { ok:ok, say:say, pickVoice:pickVoice, clip:clip,
+    warm:function(){ Clips.warm(); if(!ok) return; try{ speechSynthesis.speak(new SpeechSynthesisUtterance('')); }catch(e){} },
+    stop:function(){ Clips.stop(); if(!ok) return; try{ speechSynthesis.cancel(); }catch(e){} },
+    preload:function(w){ Clips.preload([wp(w,'word'),wp(w,'sentence'),wp(w,'meaning'),wp(w,'spell')]); },
+    starts:function(letters,done){ var L=letters.toLowerCase().split(''); return clip(['phrases/starts'].concat(L.map(function(c){ return 'letters/'+c; })),220,'It starts with '+letters.toUpperCase().split('').join(', '),0.8,done); },
+    line:function(text,done){ return clip(['lines/'+slug(text)],0,text,0.95,done); },
+    word:function(w,done){ return clip([wp(w,'word')],0,w.w,0.8,done); },
+    sentence:function(w,done){ return clip([wp(w,'sentence')],0,w.s,0.9,done); },
+    full:function(w,done){ return clip([wp(w,'word'),wp(w,'sentence'),wp(w,'word')],350,w.w+'. '+w.s+' '+w.w+'.',0.85,done); },
+    meaning:function(w,done){ return clip([wp(w,'meaning')],0,w.w+' means '+w.d+'.',0.9,done); },
+    spell:function(w,done){ return clip([wp(w,'spell')],0,w.w+'. '+w.w.toUpperCase().split('').join(', ')+'. '+w.w+'.',0.8,done); }
   };
 })();
 
@@ -2153,11 +2184,15 @@ var Say=(function(){
     if(on){ stop(); if(shown().length) review(); else bubble('playBubble','Say the letters, then tap the mic again.'); }
     else if(start()) bubble('playBubble','Go ahead, spell it out loud!'); }
   /* the word is read, then the mic turns on by itself (quietly giving up on devices that refuse a start without a tap) */
+  /* after the game has spoken (a hint, Hear it, Sentence, Meaning) the mic comes back on its own */
+  function resume(){ setTimeout(auto,250); }
   function auto(){ if(G.mode!=='say'||!G.cur||G.phase==='done'||G.screen!=='scr-play'||on||autoFailed) return; autoMode=true; restarts=0; ready=false; lastRes=0; if(src!=='mic'){ src='mic'; clearAll(); } begin(); }
-  function cue(kind){ clearTimeout(cueT); var w=G.cur, tok=++cueGen; if(!w) return;
-    function after(){ if(tok!==cueGen) return; clearTimeout(cueT); cueT=setTimeout(auto,250); }
+  /* the word is read (its recording, or the device voice), then the mic turns on once, 250 ms after the reading ends;
+     the long timer is only a safety net for audio that never reports the end */
+  function cue(kind){ clearTimeout(cueT); var w=G.cur, tok=++cueGen, fired=false; if(!w) return;
+    function after(){ if(tok!==cueGen||fired) return; fired=true; clearTimeout(cueT); cueT=setTimeout(auto,250); }
     var spoke=(kind==='spell')?Voice.spell(w,after):Voice.word(w,after);
-    if(spoke){ speakPulse(); cueT=setTimeout(after,(kind==='spell'?2500:1200)+w.w.length*(kind==='spell'?450:90)); } else cueT=setTimeout(auto,300); }
+    if(spoke){ speakPulse(); cueT=setTimeout(after,(kind==='spell'?9000:5000)+w.w.length*300); } else cueT=setTimeout(auto,300); }
   /* "Say it again": wipe the letters and listen again the same way as before */
   function again(){ if(!G.cur||G.phase==='done') return; var kb=(src==='kb')||!supported(); SFX.tick();
     if(on&&!kb){ clearAll(); heardWord=false; render(); bubble('playBubble','Okay, spell it again!'); return; }
@@ -2173,7 +2208,7 @@ var Say=(function(){
     if(/Macintosh/i.test(UA)) return 'Click the box, press the Fn key twice (or the mic key), and say the letters.';
     return "Click the box and use your computer's voice typing to say the letters."; }
   function prepare(){ var ok=supported(); $('micBtn').hidden=!ok; $('sayHint').hidden=!ok; $('sayOrTxt').textContent=ok?"or use your device's voice typing":"Spell it out loud with your device's voice typing"; $('kbHint').textContent=kbHint(); }
-  return {supported:supported,parse:parse,letters:letters,start:start,stop:stop,reset:reset,toggle:toggle,again:again,cue:cue,auto:auto,render:render,fromText:fromText,prepare:prepare,
+  return {supported:supported,parse:parse,letters:letters,start:start,stop:stop,reset:reset,toggle:toggle,again:again,cue:cue,auto:auto,resume:resume,render:render,fromText:fromText,prepare:prepare,
     get on(){return on;}, get ready(){return ready;}, get heardWord(){return heardWord;}, _android:function(v){ ANDROID=!!v; }};
 })();
 
@@ -2204,6 +2239,7 @@ function nextWord(){
     else { endRound(); return; }
   }
   var item=G.queue[G.idx]; G.cur=item.w; G.phase='answer'; G.hinted=0;
+  Voice.preload(G.cur); if(G.queue[G.idx+1]) Voice.preload(G.queue[G.idx+1].w);
   wstat(G.cur.w).seen++;
   $('main').scrollTop=0; renderDots(); $('roundLabel').innerHTML='Word '+(G.idx+1)+' of '+G.queue.length+(item.retry?' (again)':'')+'<span class="rl-grade"> - '+gradeName()+'</span>';
   ['infoBox','hintStrip','resultBox','lockinBox'].forEach(function(id){ $(id).hidden=true; $(id).innerHTML=''; });
@@ -2321,7 +2357,7 @@ function hint(){
   if(G.mode==='tiles'){ var need=w.toLowerCase()[G.tileSel.length], idx=-1; for(var i=0;i<G.tileLetters.length;i++){ if(G.tileLetters[i]===need&&G.tileSel.indexOf(i)<0){ idx=i; break; } }
     var t=document.querySelector('#tiles .tile[data-i="'+idx+'"]'); if(t) t.classList.add('glow'); }
   SFX.swoosh(); bubble('playBubble',G.hinted===1?'Here is a little help.':'One more peek!');
-  Voice.say('It starts with '+w.slice(0,G.hinted).toUpperCase().split('').join(', '),0.8);
+  Voice.starts(w.slice(0,G.hinted),G.mode==='say'?Say.resume:null);
   refocus();
 }
 function endRound(){
@@ -2333,7 +2369,7 @@ function endRound(){
   $('missedWrap').hidden=!st.missed.length; $('practiceMissed').hidden=!st.missed.length;
   $('missedList').innerHTML=st.missed.map(function(w){return '<span class="mw">'+esc(w.w)+'</span>';}).join('');
   SFX.fanfare(); bigConfetti(); if(k===3) setTimeout(bigConfetti,900); save();
-  var sv=W().sumVoice[3-k]; setTimeout(function(){ if(G.screen==='scr-summary') Voice.say(sv,0.95); },400);
+  var sv=W().sumVoice[3-k]; setTimeout(function(){ if(G.screen==='scr-summary') Voice.line(sv); },400);
 }
 /* phones: keep the app inside the visible area when the keyboard is open, and keep feedback in view */
 function isPhone(){ return window.innerWidth<=720||window.innerHeight<=500; }
@@ -2480,9 +2516,9 @@ $('levelGrid').addEventListener('click',function(e){ var b=e.target.closest('.le
 $('soundBtn').addEventListener('click',function(){ S.sound=!S.sound; save(); renderSound(); if(S.sound){ SFX.warm(); SFX.pop(); } });
 $('spellForm').addEventListener('submit',function(e){ e.preventDefault(); check(); });
 $('checkBtn').addEventListener('click',function(){ SFX.warm(); check(); });
-$('hearBtn').addEventListener('click',function(){ if(G.cur){ Voice.full(G.cur); speakPulse(); bubble('playBubble','Listen...'); refocus(); } });
-$('sentBtn').addEventListener('click',function(){ if(!G.cur) return; Voice.sentence(G.cur); showInfo('<b>Sentence:</b> '+esc(G.cur.s.replace(new RegExp(G.cur.w,'ig'),'____'))); refocus(); });
-$('meanBtn').addEventListener('click',function(){ if(!G.cur) return; Voice.meaning(G.cur); showInfo('<b>Meaning:</b> '+esc(G.cur.d)); refocus(); });
+$('hearBtn').addEventListener('click',function(){ if(G.cur){ Voice.full(G.cur,G.mode==='say'?Say.resume:null); speakPulse(); bubble('playBubble','Listen...'); refocus(); } });
+$('sentBtn').addEventListener('click',function(){ if(!G.cur) return; Voice.sentence(G.cur,G.mode==='say'?Say.resume:null); showInfo('<b>Sentence:</b> '+esc(G.cur.s.replace(new RegExp(G.cur.w,'ig'),'____'))); refocus(); });
+$('meanBtn').addEventListener('click',function(){ if(!G.cur) return; Voice.meaning(G.cur,G.mode==='say'?Say.resume:null); showInfo('<b>Meaning:</b> '+esc(G.cur.d)); refocus(); });
 $('hintBtn').addEventListener('click',hint);
 $('clearBtn').addEventListener('click',function(){ if(G.mode==='tiles'&&G.phase!=='done'){ clearTimeout(G.ttimer); G.tileSel=[]; renderTiles(); SFX.tick(); } else if(G.mode==='say'){ Say.again(); } });
 $('micBtn').addEventListener('click',function(){ Say.toggle(); });
@@ -2514,7 +2550,7 @@ window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},voic
 /* redraw after the online copy changed under this page */
 function refreshView(){ $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
-var BUILD='2026-10-04.2';
+var BUILD='2026-10-04.3';
 function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
   fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
     if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }
