@@ -15,6 +15,19 @@ export function migrateChars(st) {
   return c;
 }
 const SETTINGS = ['kid', 'grade', 'gradePicked', 'charLagoon', 'charCandy', 'charCanopy', 'charOcean', 'charBows', 'charBoba', 'look', 'theme', 'sound', 'roundLen', 'restoredId', '_sid'];
+/* store state: things spent only grow (merged like rewards), things owned are the union, what is worn or shown is the newest choice */
+const grow = (m, d, b) => Math.max(0, Math.max(d || 0, b || 0) + ((m || 0) - (b || 0)));
+const union = (a, b) => Array.from(new Set((a || []).concat(b || [])));
+export function mergeStore(out, mem, disk, base) {
+  out.storeV = Math.max(mem.storeV || 0, disk.storeV || 0);
+  out.mspent = grow(mem.mspent, disk.mspent, base.mspent);
+  out.pets = { own: union(mem.pets && mem.pets.own, disk.pets && disk.pets.own) };
+  out.decor = {};
+  const md = mem.decor || {}, dd = disk.decor || {};
+  new Set(Object.keys(md).concat(Object.keys(dd))).forEach(k => { const m = md[k], d = dd[k] || {}; out.decor[k] = { own: union(m && m.own, d.own), on: (m && m.on) ? m.on : (d.on || []) }; });
+  return out;
+}
+const charExtras = (m, d, b) => ({ spent: grow(m.spent, d.spent, b.spent), own: union(m.own, d.own), wear: m.wear ? m.wear : (d.wear || []) });
 export function mergeState(mem, disk, base) {
   const me = mem.epoch || 0, de = disk.epoch || 0, be = base.epoch || 0;
   if (me !== be) return mem;
@@ -30,8 +43,9 @@ export function mergeState(mem, disk, base) {
   out.chars = {};
   new Set(Object.keys(mc).concat(Object.keys(dc))).forEach(k => {
     const m = mc[k] || { pearls: 0 }, d = dc[k] || { pearls: 0 }, b = bc[k] || { pearls: 0 };
-    out.chars[k] = { pearls: Math.max(0, Math.max(d.pearls || 0, b.pearls || 0) + ((m.pearls || 0) - (b.pearls || 0))), wearLevel: (m.wearLevel !== undefined ? m.wearLevel : (d.wearLevel === undefined ? null : d.wearLevel)) };
+    out.chars[k] = Object.assign({ pearls: Math.max(0, Math.max(d.pearls || 0, b.pearls || 0) + ((m.pearls || 0) - (b.pearls || 0))), wearLevel: (m.wearLevel !== undefined ? m.wearLevel : (d.wearLevel === undefined ? null : d.wearLevel)) }, charExtras(m, d, b));
   });
+  mergeStore(out, mem, disk, base);
   out.totalCorrect = Math.max(0, Math.max(disk.totalCorrect || 0, base.totalCorrect || 0) + ((mem.totalCorrect || 0) - (base.totalCorrect || 0)));
   out.bestStreak = Math.max(mem.bestStreak || 0, disk.bestStreak || 0);
   out.words = {};

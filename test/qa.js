@@ -35,7 +35,7 @@ const CONTRAST = (sels) => {
   function blend(fg, b) { const a = fg.a; return { r: fg.r * a + b.r * (1 - a), g: fg.g * a + b.g * (1 - a), b: fg.b * a + b.b * (1 - a) }; }
   return sels.map(sel => { const el = document.querySelector(sel); if (!el || !el.offsetParent) return null; const fg = parse(getComputedStyle(el).color), b = bg(el); if (!fg || !b) return { sel, ratio: null }; const f = blend(fg, b); const L1 = lum(f), L2 = lum(b); const ratio = (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05); const cs = getComputedStyle(el); const fs = parseFloat(cs.fontSize), fw = parseInt(cs.fontWeight, 10); return { sel, ratio: +ratio.toFixed(2), large: fs >= 24 || (fs >= 18.66 && fw >= 700), text: (el.textContent || el.value || '').trim().slice(0, 18) }; }).filter(Boolean);
 };
-const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '.seg-btn.on', '.seg-btn:not(.on)', '.mode-btn .mode-name', '.mode-btn .mode-sub', '.progress-line', '#charHint', '.cc-name', '.char-chip.on .cc-name', '#levelsTitle', '#levelsHint', '.lc-name', '#lbLevel', '.lb-next', '#pearlCount', '#switchBtn', '.hint-text', '#roundLabel', '#checkBtn', '#hintBtn', '#quitBtn', '.listen-row .btn'];
+const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '.seg-btn.on', '.seg-btn:not(.on)', '.mode-btn .mode-name', '.mode-btn .mode-sub', '.progress-line', '#charHint', '.cc-name', '.char-chip.on .cc-name', '#storeTitle', '#storeHint', '.si-name', '.bal', '#lbLevel', '.lb-next', '#pearlCount', '#switchBtn', '.hint-text', '#roundLabel', '#checkBtn', '#hintBtn', '#quitBtn', '.listen-row .btn'];
 
 (async () => {
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: true, args: ['--mute-audio', '--disable-speech-api', '--disable-gpu'] });
@@ -74,18 +74,20 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
     const lv = i + 1;
     await page.evaluate((p) => { __spelling.SW().pearls = p; __spelling.S.epoch = (__spelling.S.epoch || 0) + 1; __spelling.save(); }, THRESH[i]);
     await goCora();
-    const lvl = await text('#lbLevel'), scene = await count('#scene [data-lv="' + lv + '"].on'), piece = await count('#axoHome .acc.on[data-lv="' + lv + '"]');
-    const card = await page.$eval('.level-card[data-lv="' + lv + '"]', el => ({ disabled: el.disabled, txt: el.textContent }));
-    ok(lvl === 'Level ' + lv && scene > 0 && piece > 0 && !card.disabled && card.txt.indexOf(OUTFITS[i]) >= 0, 'level ' + lv + ': ' + OUTFITS[i] + ' worn, scenery on, card unlocked', lvl + ' scene=' + scene + ' piece=' + piece + ' card=' + (card.disabled ? 'locked' : 'open'));
+    const lvl = await text('#lbLevel'), coins = await page.evaluate(() => __spelling.store.coins()), bal = await text('#balCoins');
+    ok(lvl === 'Level ' + lv && coins === THRESH[i] && bal === String(coins), 'level ' + lv + ' at ' + THRESH[i] + ' bubbles: the rank and the store balance agree', lvl + ' coins=' + coins + ' shown=' + bal);
     ok(await page.evaluate(() => __spelling.levelFor(__spelling.SW().pearls + 0) === __spelling.levelFor(__spelling.SW().pearls)), 'levelFor is stable');
   }
-  ok(await count('.level-card[data-lv="11"]') === 0 && /Level 11/.test(await text('.level-card.mystery')) && /1500 bubbles \+ 10 mastered/.test(await text('.level-card.mystery')), 'level 11 stays a Surprise card asking for 1500 bubbles + 10 mastered', await text('.level-card.mystery'));
+  ok(/Level 11 at 1500 bubbles \+ 10 words mastered/.test(await text('#lbNext')), 'level 11 asks for 1500 bubbles + 10 mastered', await text('#lbNext'));
+  const bought = await page.evaluate(() => { const S = __spelling.store, before = S.coins(); S.act('o' + 1, 'buy'); S.act('d' + 1, 'buy'); return { ok: S.owns(S.item('o1')) && S.showing(S.item('o1')) && S.owns(S.item('d1')) && S.showing(S.item('d1')), spent: before - S.coins() }; });
+  ok(bought.ok && bought.spent === 35 && await count('#axoHome .acc.on[data-lv="1"]') === 1 && await count('#scene [data-lv="1"].on') > 0, 'the store sells the first outfit and decoration for 35 bubbles and both show', JSON.stringify(bought));
+  ok(await page.evaluate(() => { const S = __spelling.store, it = S.item('o12'); return it.cur === 'mastery' && !S.buy(it) && S.mastery() === 0; }), 'the Tiny Buddy costs mastery points, so it cannot be bought with bubbles');
   await page.evaluate(() => { __spelling.SW().pearls = 3300; __spelling.WORDS4.forEach(w => { __spelling.S.words[w.w] = { mastered: true, streak: 3, right: 3, wrong: 0, seen: 3 }; }); __spelling.S.epoch = (__spelling.S.epoch || 0) + 1; __spelling.save(); });
   await goCora();
-  ok(await text('#lbLevel') === 'Level 20' && await count('#scene [data-lv="20"].on') > 0 && await count('#axoHome .acc.on[data-lv="20"]') > 0, 'level 20 with all 50 mastered: trophy and celebration');
+  ok(await text('#lbLevel') === 'Level 20' && await text('#balMast') === '50' && await page.evaluate(() => { const S = __spelling.store; S.act('o12', 'buy'); S.act('o21', 'buy'); S.act('d23', 'buy'); S.act('o20', 'buy'); S.act('d20', 'buy'); return S.mastery() === 39 && S.showing(S.item('o21')); }) && await count('#axoHome .acc.on[data-lv="20"]') > 0 && await count('#axoHome .acc.on[data-lv="12"]') > 0 && await count('#scene [data-lv="23"].on') > 0, 'level 20 with all 50 mastered: pet, pet bow and pet house for mastery points, trophy and celebration for bubbles');
   await page.screenshot({ path: 'qa-cora-lv20.png' });
-  await page.$eval('#levelGrid', el => el.scrollIntoView({ block: 'start' })); await sleep(200);
-  const grid = await page.$('#levelGrid'); await grid.screenshot({ path: 'qa-cora-levels.png' });
+  await page.$eval('#storeGrid', el => el.scrollIntoView({ block: 'start' })); await sleep(200);
+  const grid = await page.$('#storeGrid'); await grid.screenshot({ path: 'qa-cora-store.png' });
   await page.evaluate(() => { __spelling.SW().pearls = 1400; __spelling.S.words = {}; __spelling.S.epoch = (__spelling.S.epoch || 0) + 1; __spelling.save(); });
   await goCora();
   for (const c of CHARS) {
