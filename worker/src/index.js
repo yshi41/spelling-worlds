@@ -3,8 +3,8 @@
    and every accepted save is also kept in a history table for recovery. */
 import { mergeState, lowersProgress } from './logic.mjs';
 
-const KIDS = ['charlie', 'riley', 'vera', 'cora', 'addie', 'amy'];
-const ID_RE = /^(charlie|riley|vera|cora|addie|amy|qa-[a-z0-9-]{1,32})$/;
+const KIDS = ['charlie', 'riley', 'vera', 'cora', 'addie', 'amy', 'hallie'];
+const ID_RE = /^(charlie|riley|vera|cora|addie|amy|hallie|qa-[a-z0-9-]{1,32})$/;
 const MAX_BYTES = 200000;
 const KEEP_HISTORY = 400;
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type', 'Access-Control-Max-Age': '86400' };

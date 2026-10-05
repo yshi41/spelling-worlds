@@ -1,9 +1,9 @@
 /* merge and safety rules for saves, shared by the Worker and the test stand-in (test/mockcloud.js) */
 /* the game's own merge (index.html mergeState): the save was made from base, the service now holds cur;
    keep both sets of changes. A newer epoch (Reset) wins outright. */
-const WORLD_KEYS = ['lagoon', 'candy', 'canopy', 'ocean', 'bows', 'boba'];
-const CHAR_KEY = { lagoon: 'charLagoon', candy: 'charCandy', canopy: 'charCanopy', ocean: 'charOcean', bows: 'charBows', boba: 'charBoba' };
-const CHAR_DEF = { lagoon: 'axolotl', candy: 'bear', canopy: 'sloth', ocean: 'jellyfish', bows: 'bow', boba: 'milktea' };
+const WORLD_KEYS = ['lagoon', 'candy', 'canopy', 'ocean', 'bows', 'boba', 'soccer'];
+const CHAR_KEY = { lagoon: 'charLagoon', candy: 'charCandy', canopy: 'charCanopy', ocean: 'charOcean', bows: 'charBows', boba: 'charBoba', soccer: 'charSoccer' };
+const CHAR_DEF = { lagoon: 'axolotl', candy: 'bear', canopy: 'sloth', ocean: 'jellyfish', bows: 'bow', boba: 'milktea', soccer: 'soccerball' };
 /* every character has its own rewards (state.chars['world:character']); saves from before that are read the way
    index.html migrateChars reads them */
 export function migrateChars(st) {
@@ -14,7 +14,7 @@ export function migrateChars(st) {
   if (h && (h.pearls > 0 || h.wearLevel != null)) { const key = view + ':' + (st[CHAR_KEY[view]] || CHAR_DEF[view]); if (!c[key] || (h.pearls || 0) >= c[key].pearls) c[key] = rec(h); }
   return c;
 }
-const SETTINGS = ['kid', 'grade', 'gradePicked', 'charLagoon', 'charCandy', 'charCanopy', 'charOcean', 'charBows', 'charBoba', 'look', 'theme', 'sound', 'roundLen', 'restoredId', '_sid'];
+const SETTINGS = ['kid', 'grade', 'gradePicked', 'charLagoon', 'charCandy', 'charCanopy', 'charOcean', 'charBows', 'charBoba', 'charSoccer', 'look', 'theme', 'sound', 'roundLen', 'restoredId', '_sid'];
 /* store state: things spent only grow (merged like rewards), things owned are the union, what is worn or shown is the newest choice */
 const grow = (m, d, b) => Math.max(0, Math.max(d || 0, b || 0) + ((m || 0) - (b || 0)));
 const union = (a, b) => Array.from(new Set((a || []).concat(b || [])));
