@@ -355,7 +355,12 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 .home-panel{display:flex;flex-direction:column;gap:16px}
 .title{font-size:clamp(2rem,6vw,2.8rem);font-weight:700;color:var(--accent);line-height:1.05}
 .sub{margin:6px 0 0;color:var(--ink-soft);font-weight:600}
-.mode-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-top:16px}
+.mode-cap{margin:16px 0 0;font-weight:700;color:var(--ink-soft);font-size:.95rem}
+.mode-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:8px}
+@media (max-width:720px){ .mode-list{grid-template-columns:1fr} }
+.mode-lv{align-self:flex-start;font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.3);margin-bottom:2px}
+.mode-study{margin-top:12px;width:100%;min-height:0;flex-direction:row;align-items:center;flex-wrap:wrap;gap:4px 12px;padding:12px 18px}
+.mode-study .mode-name{font-size:1.2rem}
 .mode-btn{text-align:left;border:0;border-radius:20px;padding:16px 18px;cursor:pointer;color:#fff;box-shadow:0 6px 0 var(--press);
   display:flex;flex-direction:column;gap:4px;transition:transform .08s,box-shadow .08s;min-height:96px}
 .mode-btn:active{transform:translateY(5px);box-shadow:0 1px 0 var(--press)}
@@ -810,12 +815,13 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
           <div class="grade-row"><span class="glbl">Word list</span>
             <div class="seg" id="gradeSeg" role="group" aria-label="Word list"><button type="button" class="seg-btn on" data-g="3">3rd grade</button><button type="button" class="seg-btn" data-g="4">4th grade</button></div>
           </div>
+          <p class="mode-cap">Three ways to play, from easiest to hardest:</p>
           <div class="mode-list">
-            <button class="mode-btn" type="button" data-mode="spell"><span class="mode-name">Spell It</span><span class="mode-desc">Hear the word, then type it out.</span></button>
-            <button class="mode-btn" type="button" data-mode="say"><span class="mode-name">Say It</span><span class="mode-desc">Hear the word, then spell it out loud.</span></button>
-            <button class="mode-btn" type="button" data-mode="tiles"><span class="mode-name">Tile Time</span><span class="mode-desc">Tap the mixed-up letters into order.</span></button>
-            <button class="mode-btn" type="button" data-mode="list"><span class="mode-name">Word List</span><span class="mode-desc">See, hear, and check every word.</span></button>
+            <button class="mode-btn" type="button" data-mode="tiles"><span class="mode-lv">Easiest</span><span class="mode-name">Tile Time</span><span class="mode-desc">Tap the mixed-up letters into order.</span></button>
+            <button class="mode-btn" type="button" data-mode="spell"><span class="mode-lv">Harder</span><span class="mode-name">Spell It</span><span class="mode-desc">Hear the word, then type it out.</span></button>
+            <button class="mode-btn" type="button" data-mode="say"><span class="mode-lv">Hardest</span><span class="mode-name">Say It</span><span class="mode-desc">Spell it out loud, like the real bee.</span></button>
           </div>
+          <button class="mode-btn mode-study" type="button" data-mode="list"><span class="mode-name">Word List</span><span class="mode-desc">Study: see, hear, and check every word.</span></button>
           <div class="progress-line"><span>Mastered <b id="masteredCount">0</b> of <b id="totalCount">50</b> <span id="gradeLabel">3rd grade</span> words</span><div class="bar"><i id="masteredBar"></i></div></div>
         </div>
         <div class="card">
@@ -1298,13 +1304,15 @@ function renderSync(s){ var els=document.querySelectorAll('.sync-note'); for(var
 /* sound effects, synthesized so nothing needs downloading */
 var SFX=(function(){
   var ctx=null;
-  function ac(){ if(!S.sound) return null; try{ if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); if(ctx.state==='suspended') ctx.resume(); }catch(e){ return null; } return ctx; }
-  function tone(f,t,d,type,vol,slideTo){ var a=ac(); if(!a) return; try{ var o=a.createOscillator(), g=a.createGain(); o.type=type||'sine'; var t0=a.currentTime+(t||0);
+  function ac(){ if(!S.sound) return null; try{ if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); if(ctx.state!=='running') ctx.resume(); }catch(e){ return null; } return ctx; }
+  var holdUntil=0;
+  function tone(f,t,d,type,vol,slideTo){ var a=ac(); if(!a) return; try{ var o=a.createOscillator(), g=a.createGain(); o.type=type||'sine'; var t0=a.currentTime+(t||0)+Math.max(0,holdUntil-Date.now())/1000;
     o.frequency.setValueAtTime(f,t0); if(slideTo) o.frequency.exponentialRampToValueAtTime(slideTo,t0+d);
     g.gain.setValueAtTime(0.0001,t0); g.gain.exponentialRampToValueAtTime(vol||0.2,t0+0.015); g.gain.exponentialRampToValueAtTime(0.0001,t0+d);
     o.connect(g); g.connect(a.destination); o.start(t0); o.stop(t0+d+0.05); }catch(e){} }
   return {
     warm:function(){ ac(); },
+    hold:function(ms){ holdUntil=Date.now()+ms; },
     correct:function(){ [523.25,659.25,783.99,1046.5].forEach(function(f,i){ tone(f,i*0.08,0.3,'triangle',0.16); }); },
     wrong:function(){ tone(240,0,0.28,'sine',0.14,170); tone(200,0.2,0.35,'sine',0.1,120); },
     pop:function(){ tone(500,0,0.09,'sine',0.12,900); },
@@ -1320,15 +1328,20 @@ var SFX=(function(){
 var Voice=(function(){
   var ok=('speechSynthesis' in window)&&('SpeechSynthesisUtterance' in window);
   var voice=null;
-  function choose(){ if(!ok) return; var vs=speechSynthesis.getVoices(); if(!vs||!vs.length) return;
-    var pref=['Google US English','Samantha','Microsoft Aria','Microsoft Jenny','Microsoft Zira','Microsoft Emma','Microsoft Ava','Karen'];
-    voice=null;
-    for(var i=0;i<pref.length&&!voice;i++){ for(var j=0;j<vs.length;j++){ if(vs[j].name.indexOf(pref[i])>=0&&/^en/i.test(vs[j].lang)){ voice=vs[j]; break; } } }
-    if(!voice){ voice=vs.filter(function(v){return /^en[-_]US/i.test(v.lang);})[0]||vs.filter(function(v){return /^en/i.test(v.lang);})[0]||null; } }
+  /* a sweet, friendly teacher: natural or online voices first, known women's voices next, never the men's */
+  var WOMEN=['aria','jenny','ava','emma','samantha','karen','zira','michelle','ana','libby','sonia','nicky','allison','susan','moira','tessa','fiona','kate','serena','joanna','salli','kendra','ivy','olivia','natasha','clara','google us english','google uk english female','female'];
+  var MEN=['david','mark','guy','daniel','alex','fred','google uk english male','male','ryan','thomas','james','arthur','christopher','eric','andrew','brian','liam','oliver','tom','aaron','rishi','gordon','reed','rocko','eddy','grandpa','ralph','junior','bruce','lee','william','matthew','joey','justin','kevin'];
+  function has(n,list){ for(var i=0;i<list.length;i++){ if(new RegExp('(^|[^a-z])'+list[i].replace(/ /g,'[ _-]')+'($|[^a-z])').test(n)) return i; } return -1; }
+  function score(v){ var n=(v.name||'').toLowerCase(), l=(v.lang||'').toLowerCase(), sc=0; if(!/^en/.test(l)) return -1;
+    if(/^en[-_]us/.test(l)) sc+=20; else if(/^en[-_](gb|au|ca|ie|nz|in)/.test(l)) sc+=8;
+    if(has(n,MEN)>=0) return sc-100; var w=has(n,WOMEN); if(w>=0) sc+=60-w;
+    if(/natural|neural|online|premium|enhanced/.test(n)) sc+=30; if(/google/.test(n)) sc+=15; if(/siri/.test(n)) sc+=10; return sc; }
+  function pickVoice(vs){ var best=null, bs=-Infinity; for(var k=0;k<vs.length;k++){ var sc=score(vs[k]); if(sc===-1) continue; if(sc>bs){ bs=sc; best=vs[k]; } } return best; }
+  function choose(){ if(!ok) return; var vs=speechSynthesis.getVoices(); if(!vs||!vs.length) return; voice=pickVoice(vs); }
   if(ok){ choose(); try{ speechSynthesis.onvoiceschanged=choose; }catch(e){} }
   function say(text,rate,done){ if(!ok) return false; try{ if(typeof Say!=='undefined'&&Say&&Say.on) Say.stop(); }catch(e){} try{ var busy=speechSynthesis.speaking||speechSynthesis.pending; if(busy) speechSynthesis.cancel();
-    var u=new SpeechSynthesisUtterance(text); if(done){ u.onend=function(){ done(); }; u.onerror=function(){ done(); }; } u.rate=rate||0.85; u.pitch=1.05; u.lang='en-US'; if(voice) u.voice=voice; if(busy) setTimeout(function(){ try{ speechSynthesis.speak(u); }catch(e){} },80); else speechSynthesis.speak(u); }catch(e){ return false; } return true; }
-  return { ok:ok, say:say,
+    var u=new SpeechSynthesisUtterance(text); if(done){ u.onend=function(){ done(); }; u.onerror=function(){ done(); }; } u.rate=rate||0.88; u.pitch=1.12; u.lang='en-US'; if(voice) u.voice=voice; if(busy) setTimeout(function(){ try{ speechSynthesis.speak(u); }catch(e){} },80); else speechSynthesis.speak(u); }catch(e){ return false; } return true; }
+  return { ok:ok, say:say, pickVoice:pickVoice,
     warm:function(){ if(!ok) return; try{ speechSynthesis.speak(new SpeechSynthesisUtterance('')); }catch(e){} },
     stop:function(){ if(!ok) return; try{ speechSynthesis.cancel(); }catch(e){} },
     word:function(w,done){ return say(w.w,0.75,done); },
@@ -2134,7 +2147,7 @@ var Say=(function(){
     $('micNotice').hidden=true; render(); return true; }
   function start(){ if(!G.cur||G.phase==='done') return false; Voice.stop(); clearTimeout(cueT); autoMode=false; autoFailed=false; restarts=0; ready=false; lastRes=0; if(src!=='mic'){ src='mic'; clearAll(); } $('sayInput').value=''; return begin(); }
   /* stop keeps what was heard (the next tap adds more); reset wipes it */
-  function stop(){ want=false; clearTimeout(qtimer); if(on){ on=false; gen++; try{ if(rec) rec.abort(); }catch(e){} base=beamAll||base; segF=[]; segI=[]; recompute(); } ready=false; render(); }
+  function stop(){ want=false; clearTimeout(qtimer); if(on){ on=false; gen++; try{ if(rec) rec.abort(); }catch(e){} SFX.hold(350); base=beamAll||base; segF=[]; segI=[]; recompute(); } ready=false; render(); }
   function reset(){ stop(); clearTimeout(cueT); cueGen++; src='mic'; heardWord=false; clearAll(); $('sayInput').value=''; $('micNotice').hidden=true; render(); }
   function toggle(){ if(!G.cur||G.phase==='done') return; SFX.warm();
     if(on){ stop(); if(shown().length) review(); else bubble('playBubble','Say the letters, then tap the mic again.'); }
@@ -2497,11 +2510,11 @@ if(HOVER){
   s.style.cssText='left:'+(Math.random()*100)+'%;width:'+size+'px;height:'+size+'px;--c:'+cols[i%5]+';animation-duration:'+(10+Math.random()*13)+'s;animation-delay:'+(-Math.random()*22)+'s;'; b.appendChild(s); } })();
 
 /* small handle for automated tests */
-window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},world:world,save:save,startRound:startRound,levelFor:levelFor,SW:SW,charKey:charKey,migrateChars:migrateChars,WORDS3:WORDS3,WORDS4:WORDS4,net:Net,selectProfile:selectProfile,say:Say,get ONLINE(){return ONLINE;},get LIVE(){return LIVE;}};
+window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},voice:Voice,world:world,save:save,startRound:startRound,levelFor:levelFor,SW:SW,charKey:charKey,migrateChars:migrateChars,WORDS3:WORDS3,WORDS4:WORDS4,net:Net,selectProfile:selectProfile,say:Say,get ONLINE(){return ONLINE;},get LIVE(){return LIVE;}};
 /* redraw after the online copy changed under this page */
 function refreshView(){ $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
-var BUILD='2026-10-04.1';
+var BUILD='2026-10-04.2';
 function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
   fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
     if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }
