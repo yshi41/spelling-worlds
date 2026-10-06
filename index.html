@@ -429,6 +429,10 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 .star-ic{color:var(--gold-deep)}
 .store-tabs{margin-bottom:10px}
 .store-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px}
+#storeGrid{display:block}
+.store-group{margin-bottom:14px}
+.sg-title{font-size:1.05rem;margin:4px 0 8px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;color:var(--ink)}
+.sg-note{font-size:.72rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);background:var(--surface-2);border:2px solid var(--line);border-radius:999px;padding:2px 8px}
 .shop-item{border:2px solid var(--line);background:var(--surface-2);border-radius:16px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
 .shop-item svg{width:78px;height:70px;overflow:visible}
 .shop-item .axo,.shop-item .gill,.shop-item .ear,.shop-item .eye-open,.shop-item .aura,.shop-item .spark,.shop-item .gglow,.shop-item .heart{animation:none}
@@ -2403,6 +2407,8 @@ var PET_SCENE=[{lv:21,name:'Pet Bed',price:3},{lv:22,name:'Food Bowl',price:2},{
 var COIN_PRICES=[20,40,60,80,100,120,140,160,180,200,150,0,180,200,220,240,0,260,280,300];
 var PET_PRICES={12:4,17:6};
 var SLOT_OF={}; Object.keys(SLOTS).forEach(function(s){ SLOTS[s].forEach(function(lv){ SLOT_OF[lv]=s; }); });
+/* a bundle like a hat with a wand fills every spot it covers */
+function slotsOf(lv){ var o=[]; Object.keys(SLOTS).forEach(function(s){ if(SLOTS[s].indexOf(lv)>=0) o.push(s); }); return o; }
 PET_ACC.forEach(function(a){ SLOTS[a.slot]=[a.lv]; SLOT_OF[a.lv]=a.slot; });
 function cap(s){ return s.charAt(0).toUpperCase()+s.slice(1); }
 function storeItems(k){ var L=WORLDS[k].levels, out=[];
@@ -2427,7 +2433,7 @@ function canAfford(it){ return it.cur==='mastery'?masteryPts()>=it.price:coins()
 function wear(lv,on){ var w=wearList(), slot=SLOT_OF[lv], i=w.indexOf(lv);
   if(!on){ if(i>=0) w.splice(i,1); if(lv===12){ [21,22,23].forEach(function(a){ var j=w.indexOf(a); if(j>=0) w.splice(j,1); }); } return true; }
   if(lv>=21&&lv<=23&&w.indexOf(12)<0) return false;
-  if(slot) SLOTS[slot].forEach(function(o){ var j=w.indexOf(o); if(j>=0) w.splice(j,1); });
+  slotsOf(lv).forEach(function(sl){ SLOTS[sl].forEach(function(o){ var j=w.indexOf(o); if(j>=0) w.splice(j,1); }); });
   if(w.indexOf(lv)<0) w.push(lv); return true; }
 function place(lv,on){ var d=decorRec(), i=d.on.indexOf(lv); if(on&&i<0) d.on.push(lv); if(!on&&i>=0) d.on.splice(i,1); }
 function buy(it){ if(owns(it)||!canAfford(it)) return false;
@@ -2474,11 +2480,21 @@ function itemButton(it){ var own=owns(it), on=showing(it);
 function itemPic(it){ if(isScene(it)) return '<div class="si-swatch" aria-hidden="true"><span>'+esc(it.name.charAt(0))+'</span></div>';
   var list=[it.lv]; if(it.kind==='petacc') list.push(wearList().indexOf(17)>=0&&wearList().indexOf(12)<0?17:12);
   var html=axoSVG(), box=document.createElement('div'); box.innerHTML=html; applyWear(box,list); return box.innerHTML; }
+/* the store is laid out by where things go: items that share a spot (one hat at a time) sit together under one heading */
+var SLOT_NAMES={hat:'Hats',neck:'Necklaces',eyes:'Glasses',cape:'Capes',wand:'Wands',shoulders:'Shoulder pads',aura:'Glow',halo:'Halo'};
+function storeGroups(tab,items){ var groups=[], by={};
+  function add(name,note,it){ var g=by[name]; if(!g){ g=by[name]={name:name,note:note,items:[]}; groups.push(g); } g.items.push(it); }
+  if(tab==='outfit'){ items.forEach(function(it){ var sl=slotsOf(it.lv)[0], nm=SLOT_NAMES[sl]; if(nm) add(nm,'',it); else add('Wear with anything','',it); });
+    groups.forEach(function(g){ if(g.name!=='Wear with anything'&&g.items.length>1) g.note='pick one'; }); }
+  else if(tab==='pet'){ items.forEach(function(it){ add(it.kind==='pet'?'Pets':it.kind==='petacc'?'For your pet':'Pet things in the scene',it.kind==='pet'?'both can come out':it.kind==='petacc'?'needs the Tiny Buddy out':'show as many as you like',it); }); }
+  else items.forEach(function(it){ add('Decorations','show as many as you like',it); });
+  return groups; }
 function renderStore(){ var tab=STORE_TAB, items=storeItems(world()).filter(function(it){ return tab==='pet'?it.cur==='mastery':tab==='decor'?it.kind==='decor':it.kind==='outfit'; });
   $('balCoins').textContent=coins(); $('balCur').textContent=W().cur; $('balMast').textContent=masteryPts();
   var tabs=document.querySelectorAll('#storeTabs .chip'); for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle('on',tabs[i].getAttribute('data-tab')===tab);
-  $('storeGrid').innerHTML=items.map(function(it){ var own=owns(it), on=own&&showing(it);
-    return '<div class="shop-item'+(own?' owned':'')+(on?' on':'')+' k-'+it.kind+'" data-id="'+it.id+'">'+itemPic(it)+'<div class="si-name">'+esc(it.name)+'</div><div class="si-price">'+(own?(on?(isScene(it)?'Showing':'Wearing'):'Yours'):priceText(it))+'</div>'+itemButton(it)+(isScene(it)&&!own?'<button type="button" class="btn btn-ghost btn-sm si-peek" data-act="peek">Peek</button>':'')+'</div>'; }).join('');
+  function card(it){ var own=owns(it), on=own&&showing(it);
+    return '<div class="shop-item'+(own?' owned':'')+(on?' on':'')+' k-'+it.kind+'" data-id="'+it.id+'">'+itemPic(it)+'<div class="si-name">'+esc(it.name)+'</div><div class="si-price">'+(own?(on?(isScene(it)?'Showing':'Wearing'):'Yours'):priceText(it))+'</div>'+itemButton(it)+(isScene(it)&&!own?'<button type="button" class="btn btn-ghost btn-sm si-peek" data-act="peek">Peek</button>':'')+'</div>'; }
+  $('storeGrid').innerHTML=storeGroups(tab,items).map(function(g){ return '<div class="store-group" data-group="'+esc(g.name)+'"><h4 class="sg-title">'+esc(g.name)+(g.note?' <span class="sg-note">'+esc(g.note)+'</span>':'')+'</h4><div class="store-grid">'+g.items.map(card).join('')+'</div></div>'; }).join('');
   $('storeHint').textContent='Spend your '+W().cur+' on outfits and things '+W().where+'. Pets and pet things cost mastery points: one for every word you master.'; }
 function storeAct(id,act){ var it=storeItem(id); if(!it) return; SFX.warm();
   if(act==='peek'){ peek(it.lv); SFX.tick(); return; }
@@ -2711,11 +2727,12 @@ function worldTransition(fn){ var r=$('worldBtn').getBoundingClientRect(), d=doc
   try{ reduce=matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
   if(document.startViewTransition&&!reduce){ try{ document.startViewTransition(fn); return; }catch(e){} }
   fn(); sceneFlash(); }
-function renderProfiles(){ var keepS=S, keepK=K_INK, html='';
-  PLAYERS.forEach(function(p){ S=playerState(p.id); K_INK=WORLDS[world()].ink; var lv=levelFor(SW().pearls);
+/* each tile is drawn in that kid's own saved world, never in a world being previewed, and without creating any record on their save */
+function renderProfiles(){ var keepS=S, keepK=K_INK, keepP=PREVIEW, html=''; PREVIEW=null;
+  PLAYERS.forEach(function(p){ S=playerState(p.id); K_INK=WORLDS[world()].ink; var rec=(S.chars&&S.chars[charKey(world(),charId())])||{pearls:0}, lv=levelFor(rec.pearls);
     html+='<button type="button" class="profile-card'+(p.id===(P.current||P.last)?' on':'')+'" data-id="'+p.id+'"'+(LOADED?'':' disabled')+'>'+axoSVG({plain:true,mood:'happy'})+'<span class="pc-name">'+esc(p.name)+'</span><span class="pc-sub">'+(LOADED?'Level '+lv:'Loading...')+'</span></button>'; });
-  S=keepS; K_INK=keepK; $('profileGrid').innerHTML=html; }
-function showProfiles(){ clearTimeout(G.timer); clearTimeout(G.vtimer); clearTimeout(G.ttimer); Voice.stop(); Say.reset(); G.cur=null; renderProfiles(); show('scr-profiles'); }
+  S=keepS; K_INK=keepK; PREVIEW=keepP; $('profileGrid').innerHTML=html; }
+function showProfiles(){ clearTimeout(G.timer); clearTimeout(G.vtimer); clearTimeout(G.ttimer); Voice.stop(); Say.reset(); G.cur=null; if(PICKING) endPick(); renderProfiles(); show('scr-profiles'); }
 function selectProfile(id){ var p=profileById(id); if(!p||!LOADED) return; P.current=id; wordSel=null; wordFilter='all'; $('wordDetail').innerHTML='<p class="hint-text">Tap a word to hear it and see what it means.</p>'; loadState(id); S.kid=p.name; save(); applyWorld(); renderSound(); renderHome(); show('scr-home'); }
 /* hover previews: show a world's whole look without changing anything */
 function previewWorld(w,st){ var keepS=S; if(st) S=st; PREVIEW=w;
@@ -2816,7 +2833,7 @@ window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},voic
 /* redraw after the online copy changed under this page */
 function refreshView(){ migrateStore(S); $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
-var BUILD='2026-10-05.3';
+var BUILD='2026-10-05.5';
 function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
   fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
     if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }

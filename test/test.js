@@ -624,6 +624,34 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   ok(cloud.store.hallie.state.chars['birds:titanis'].pearls === 180 && cloud.store.hallie.state.soccerMoved === 1, 'and the moved save lands online');
   await page.evaluate(() => document.getElementById('switchBtn').click()); await sleep(300);
 
+  console.log('12h4. Trying a world and leaving without saving changes nobody');
+  await page.evaluate(() => __spelling.selectProfile('riley')); await sleep(300);
+  const keysBefore = await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.keys(__spelling.LIVE).filter(id => id !== 'riley').map(id => [id, Object.keys(__spelling.LIVE[id].chars || {}).sort()]))));
+  await page.evaluate(() => { document.getElementById('worldBtn').click(); }); await sleep(150);
+  await page.evaluate(() => { document.querySelector('.world-chip[data-look="candy"]').click(); }); await sleep(200);
+  ok(await world() === 'candy' && await page.evaluate(() => !__spelling.S.look || __spelling.S.look === 'lagoon'), 'Riley tries the candy world without saving it');
+  await page.evaluate(() => document.getElementById('switchBtn').click()); await sleep(300);
+  ok(await page.evaluate(() => Array.from(document.querySelectorAll('.profile-card')).map(e => e.getAttribute('data-id') + ':' + (e.querySelector('svg.axo') ? 'axo' : '?')).length === 7) && await world() === 'lagoon', 'the player screen comes back with the preview cleared');
+  const tileWorlds = await page.evaluate(() => { const H = __spelling; return H.LIVE && Object.keys(H.LIVE).map(id => id + ':' + (H.LIVE[id].look || H.LIVE[id].theme)).join(' '); });
+  ok(!/candy/.test(tileWorlds.replace('charlie:candy', '')), 'nobody but Charlie is in the candy world (' + tileWorlds + ')');
+  ok(await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.keys(__spelling.LIVE).filter(id => id !== 'riley').map(id => [id, Object.keys(__spelling.LIVE[id].chars || {}).sort()])))) === keysBefore, 'and no stray record was created on the other kids');
+  await page.click('.profile-card[data-id="vera"]'); await sleep(500);
+  ok(await world() === 'canopy', 'Vera opens in her own rainforest');
+  await page.evaluate(() => document.getElementById('switchBtn').click()); await sleep(300);
+
+  console.log('12h5. The store is laid out by where things go');
+  await page.click('.profile-card[data-id="riley"]'); await sleep(500);
+  await page.click('#storeTabs .chip[data-tab="outfit"]'); await sleep(150);
+  const groups = await page.evaluate(() => Array.from(document.querySelectorAll('#storeGrid .store-group')).map(g => g.getAttribute('data-group') + '=' + Array.from(g.querySelectorAll('.shop-item')).map(e => e.getAttribute('data-id').slice(1)).join(',')));
+  ok(groups[0] === 'Hats=1,4,6,7,10' && groups.indexOf('Necklaces=2') >= 0 && groups.indexOf('Glasses=3') >= 0 && groups.indexOf('Capes=5,8') >= 0 && groups.indexOf('Glow=9') >= 0, 'outfits that share a spot sit together, bundles under their first spot: Hats 1,4,6,7,10, Capes 5,8 (' + groups.join(' | ') + ')');
+  ok(groups[groups.length - 1] === 'Wear with anything=11,13,14,15,16,18,19,20', 'the extras that go with anything come last, without the pets');
+  ok(await page.evaluate(() => Array.from(document.querySelectorAll('#storeGrid .store-group')).map(g => g.getAttribute('data-group') + (g.querySelector('.sg-note') ? '*' : '')).join('|')) === 'Hats*|Necklaces|Glasses|Capes*|Glow|Wear with anything', 'only groups with a choice are marked "pick one"');
+  ok(await page.evaluate(() => { const S = __spelling.store, w = __spelling.SW(); w.wear = []; S.wear(1, true); S.wear(5, true); S.wear(10, true); const a = w.wear.slice().sort().join(','); S.wear(2, true); S.wear(7, true); const b = w.wear.slice().sort().join(','); w.wear = []; return a === '10' && b === '7'; }), 'a bundle takes off everything in the spots it covers: the crown-and-cape replaces hat and cape, the crown-and-necklace replaces the necklace and the crown');
+  await page.click('#storeTabs .chip[data-tab="pet"]'); await sleep(150);
+  ok(await page.evaluate(() => Array.from(document.querySelectorAll('#storeGrid .store-group')).map(g => g.getAttribute('data-group')).join('|')) === 'Pets|For your pet|Pet things in the scene', 'the Pets tab is split into pets, things for the pet, and pet things in the scene');
+  await page.click('#storeTabs .chip[data-tab="outfit"]'); await sleep(100);
+  await page.evaluate(() => document.getElementById('switchBtn').click()); await sleep(300);
+
   console.log('12i. Online only: nothing is kept in the browser');
   {
     const src = require('fs').readFileSync(path.resolve(process.argv[2]), 'utf8');
