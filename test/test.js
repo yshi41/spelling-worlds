@@ -50,6 +50,23 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   ok(await world() === 'lagoon', 'hovering Riley shows the lagoon');
   await away();
 
+  console.log('2b. Hovering a player tile never moves anything (every world shares one display font)');
+  {
+    const src = require('fs').readFileSync(path.resolve(process.argv[2]), 'utf8');
+    const fonts = (src.match(/--display:'[^']*'/g) || []).map(x => x.slice(11, -1));
+    ok(fonts.length >= 3 && fonts.every(f => f === 'Fredoka'), 'every world uses the same display font (' + fonts.filter((v, i, a) => a.indexOf(v) === i).join(', ') + ')');
+    await page.setViewport({ width: 1280, height: 1700 }); await sleep(300); await page.evaluate(() => document.fonts.ready);
+    const snap = () => page.evaluate(() => { const o = {}; let i = 0; document.querySelectorAll('header *, #scr-profiles, #scr-profiles *').forEach(e => { if (e.closest('svg') && e.tagName !== 'svg') return; const r = e.getBoundingClientRect(); if (r.width || r.height) o[(e.id ? '#' + e.id : e.tagName.toLowerCase() + (e.className && typeof e.className === 'string' ? '.' + e.className.split(' ')[0] : '')) + '@' + (i++)] = [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)].join(','); }); return o; });
+    await away(); const base = await snap(); const moved = [];
+    for (const id of await page.$$eval('.profile-card', els => els.map(e => e.getAttribute('data-id')))) {
+      await page.hover('.profile-card[data-id="' + id + '"]'); await sleep(120); const early = await snap(); await sleep(700); const late = await snap();
+      Object.keys(base).filter(k => k.indexOf('#brand@') !== 0 && (late[k] !== base[k] || early[k] !== base[k])).forEach(k => moved.push(id + ' ' + k + ' ' + base[k] + ' -> ' + late[k] + (early[k] !== late[k] ? ' (early ' + early[k] + ')' : '')));
+      await away();
+    }
+    ok(moved.length === 0, 'hovering each of the seven tiles moves no box on the player screen, right after the hover or once fonts load' + (moved.length ? ': ' + moved.slice(0, 5).join(' | ') : ''));
+    await page.setViewport({ width: 1200, height: 900 }); await sleep(300);
+  }
+
   console.log('3. Pick Charlie');
   await page.click('.profile-card[data-id="charlie"]'); await sleep(500);
   ok(await visible('#scr-home'), 'home shown');

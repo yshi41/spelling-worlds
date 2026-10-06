@@ -195,6 +195,23 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
   ok(html.length > 1000 && !/setItem|sessionStorage|indexedDB|document\.cookie|caches\.|openDatabase/.test(html), 'the published game code never writes browser storage, cookies, IndexedDB, or caches');
   ok(cloud.storageWrites.length === 0, 'no browser storage writes during the whole sweep', cloud.storageWrites.slice(0, 5).join(', '));
   ok((await page.evaluate(() => Object.keys(localStorage).length + document.cookie.length)) === 0, 'browser storage and cookies are empty after playing');
+  console.log('J. Hovering a player tile never moves anything, with the real web fonts');
+  {
+    await page.setViewport({ width: 1280, height: 1700 }); await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
+    await page.goto(URL + (URL.indexOf('?') < 0 ? '?' : '&') + 'p=' + Date.now(), { waitUntil: 'load' }); await sleep(1200); await page.evaluate(() => document.fonts.ready);
+    const worlds = await page.evaluate(() => { const out = {}, root = document.documentElement, keep = root.getAttribute('data-world'); ['lagoon', 'candy', 'canopy', 'ocean', 'bows', 'boba', 'birds', 'cheer'].forEach(k => { root.setAttribute('data-world', k); out[k] = getComputedStyle(root).getPropertyValue('--display').trim(); }); root.setAttribute('data-world', keep); return out; });
+    const fam = Object.values(worlds).filter((v, i, a) => a.indexOf(v) === i);
+    ok(fam.length === 1, 'every world uses the same display font on the live site', JSON.stringify(worlds));
+    const snap = () => page.evaluate(() => { const o = {}; let i = 0; document.querySelectorAll('header *, #scr-profiles, #scr-profiles *').forEach(e => { if (e.closest('svg') && e.tagName !== 'svg') return; const r = e.getBoundingClientRect(); if (r.width || r.height) o[(e.id ? '#' + e.id : e.tagName.toLowerCase() + (e.className && typeof e.className === 'string' ? '.' + e.className.split(' ')[0] : '')) + '@' + (i++)] = [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)].join(','); }); return o; });
+    await page.mouse.move(4, 900); await sleep(250); const base = await snap(); const moved = [];
+    for (const id of await page.$$eval('.profile-card', els => els.map(e => e.getAttribute('data-id')))) {
+      await page.hover('.profile-card[data-id="' + id + '"]'); await sleep(120); const early = await snap(); await sleep(800); const late = await snap();
+      Object.keys(base).filter(k => k.indexOf('#brand@') !== 0 && (late[k] !== base[k] || early[k] !== base[k])).forEach(k => moved.push(id + ' ' + k + ' ' + base[k] + ' -> ' + late[k] + (early[k] !== late[k] ? ' (early ' + early[k] + ')' : '')));
+      await page.mouse.move(4, 900); await sleep(250);
+    }
+    ok(moved.length === 0, 'hovering each player tile moves no box, right after the hover or once fonts load', moved.slice(0, 5).join(' | '));
+  }
+
   await browser.close();
   console.log('\n' + passes + ' passed, ' + fails + ' failed, ' + warns + ' warnings');
   if (issues.length) { console.log('ISSUES:'); issues.forEach(i => console.log(' - ' + i)); }
