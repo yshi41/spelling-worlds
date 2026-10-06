@@ -12,7 +12,7 @@
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap">
 <style>
 /* the lagoon world (3rd grade) is the default palette; the candy world (4th grade) overrides it */
 :root{
@@ -29,7 +29,7 @@
   --shadow:0 10px 30px rgba(23,58,66,.14); --press:rgba(23,58,66,.22);
 }
 :root[data-world="candy"]{
-  --display:'Baloo 2';
+  --display:'Fredoka';
   --bg:#FFF3F8; --bg-deep:#FFD3E6; --surface:#FFFFFF; --surface-2:#FFF6FA;
   --ink:#4A2C3A; --ink-soft:#8A6478; --line:#F3CFE0;
   --mascot:#FF5C8A; --accent:#F0468C;
@@ -80,8 +80,8 @@ body{margin:0;font-family:'Nunito',system-ui,-apple-system,'Segoe UI',sans-serif
 button{font-family:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--sky);outline-offset:3px}
 h1,h2,h3{font-family:var(--display),'Nunito',sans-serif;text-wrap:balance;margin:0}
-/* every world's display font gets the same line height, so switching or previewing a world never moves anything (Baloo 2 runs about 1.6 tall by default) */
-h1,h2,h3,.brand,.stat,.btn,.bubble,.levelbar .lb-lv,.seg-btn,.axo-name,.mode-btn .mode-name,.round-label,.hint-strip .h,.spell-input,.tile,.lockin .lock-word,.word-row .wr-word,.word-detail .wd-word,.sum-stat b,.missed-list .mw,.float-txt,.player-line b,.list-badge,.level-card .lc-q{line-height:1.2}
+/* one display font (Fredoka) in every world, with one line height, so switching or previewing a world never moves anything */
+h1,h2,h3,.brand,.stat,.btn,.bubble,.levelbar .lb-lv,.seg-btn,.axo-name,.mode-btn .mode-name,.round-label,.hint-strip .h,.spell-input,.tile,.lockin .lock-word,.word-row .wr-word,.word-detail .wd-word,.sum-stat b,.missed-list .mw,.float-txt,.player-line b,.list-badge,.level-card .lc-q,.si-name,.say-input,.sg-title{line-height:1.2}
 #pearlCount{min-width:2.6em}#streakCount{min-width:1.3em}
 
 /* ambient: bubbles in the lagoon, sugar puffs in the sweetshop */
@@ -1700,7 +1700,7 @@ function extraScene(rnd){
   s+='<g data-lv="23"><rect x="1000" y="676" width="110" height="84" rx="8" fill="#E8A96A" stroke="#B5723B" stroke-width="4"/><path d="M988 682 L1055 626 L1122 682 Z" fill="#C0392B" stroke="#8E2A20" stroke-width="4" stroke-linejoin="round"/><path d="M1035 760 L1035 712 a20 20 0 0 1 40 0 L1075 760 Z" fill="#5A3A22"/><circle cx="1055" cy="652" r="5" fill="#FFD23F"/></g>';
   var L=charList(), pr=''; for(i=0;i<L.length;i++){ var d=DRAW[L[i][0]](K_INK); pr+='<g transform="translate('+(i*120)+' 648) scale(.22)">'+d.back+d.main+'</g>'; }
   s+='<g data-lv="19"><g class="parade">'+pr+'</g></g>';
-  s+='<g data-lv="20"><rect x="330" y="40" width="540" height="84" rx="42" fill="#F2C94C" stroke="#fff" stroke-width="6"/><text x="600" y="98" text-anchor="middle" font-family="Fredoka, Baloo 2, sans-serif" font-weight="700" font-size="48" fill="#5A4300">Spelling Master!</text>';
+  s+='<g data-lv="20"><rect x="330" y="40" width="540" height="84" rx="42" fill="#F2C94C" stroke="#fff" stroke-width="6"/><text x="600" y="98" text-anchor="middle" font-family="Fredoka, sans-serif" font-weight="700" font-size="48" fill="#5A4300">Spelling Master!</text>';
   for(i=0;i<16;i++) s+='<rect class="drop" style="--d:'+(4+rnd()*4).toFixed(1)+'s;--dl:-'+(rnd()*8).toFixed(1)+'s" x="'+Math.round(rnd()*1200)+'" y="0" width="10" height="22" rx="3" fill="'+RAINBOW[i%6]+'"/>';
   s+='</g>';
   return s;
@@ -1835,7 +1835,7 @@ function birdsTop(rnd){
   s+='<g data-lv="9">'+ff+'</g>';
   /* 10: a meteor shower */
   var mt=''; for(i=0;i<5;i++){ mt+='<g class="shoot" style="--dl:-'+(i*1.5).toFixed(1)+'s"><line x1="'+(100+i*220)+'" y1="'+(30+i*30)+'" x2="'+(180+i*220)+'" y2="'+(70+i*30)+'" stroke="#FFE24A" stroke-width="5" stroke-linecap="round"/><circle cx="'+(180+i*220)+'" cy="'+(70+i*30)+'" r="7" fill="#FF8A3C"/></g>'; }
-  s+='<g data-lv="10">'+mt+'<rect x="330" y="170" width="540" height="84" rx="42" fill="#C2552B" stroke="#fff" stroke-width="6"/><text x="600" y="228" text-anchor="middle" font-family="Fredoka, Baloo 2, sans-serif" font-weight="700" font-size="44" fill="#fff">Legend of the Valley</text></g>';
+  s+='<g data-lv="10">'+mt+'<rect x="330" y="170" width="540" height="84" rx="42" fill="#C2552B" stroke="#fff" stroke-width="6"/><text x="600" y="228" text-anchor="middle" font-family="Fredoka, sans-serif" font-weight="700" font-size="44" fill="#fff">Legend of the Valley</text></g>';
   return s;
 }
 function birdsBottom(rnd){
@@ -1874,7 +1874,7 @@ function cheerTop(rnd){
   s+='<rect data-lv="9" x="0" y="0" width="1200" height="800" fill="url(#ch-glow)"/>';
   /* 1: spirit banners strung across */
   var bunt=''; for(i=0;i<16;i++){ var fx=40+i*72, fy=64+Math.round(Math.sin(i/15*Math.PI)*40); bunt+='<polygon points="'+(fx-16)+','+fy+' '+(fx+16)+','+fy+' '+fx+','+(fy+30)+'" fill="'+['#E0338A','#fff','#FFD23F','#7B4BD6'][i%4]+'"/>'; }
-  s+='<g data-lv="1"><path d="M0 58 Q600 144 1200 58" stroke="#fff" stroke-width="4" fill="none"/>'+bunt+'<rect x="40" y="170" width="340" height="70" rx="12" fill="#7B4BD6" stroke="#fff" stroke-width="5"/><text x="210" y="218" text-anchor="middle" font-family="Fredoka, Baloo 2, sans-serif" font-weight="700" font-size="40" fill="#FFD23F">GO TEAM!</text></g>';
+  s+='<g data-lv="1"><path d="M0 58 Q600 144 1200 58" stroke="#fff" stroke-width="4" fill="none"/>'+bunt+'<rect x="40" y="170" width="340" height="70" rx="12" fill="#7B4BD6" stroke="#fff" stroke-width="5"/><text x="210" y="218" text-anchor="middle" font-family="Fredoka, sans-serif" font-weight="700" font-size="40" fill="#FFD23F">GO TEAM!</text></g>';
   /* 3: floating pom-poms */
   function pom(x,y,r,c1,c2){ var q='', k; for(k=0;k<12;k++){ var a=k*Math.PI/6; q+='<line x1="'+x+'" y1="'+y+'" x2="'+(x+Math.cos(a)*r).toFixed(1)+'" y2="'+(y+Math.sin(a)*r).toFixed(1)+'" stroke="'+(k%2?c1:c2)+'" stroke-width="5" stroke-linecap="round"/>'; } return q+svgDot(x,y,r*0.45,c1); }
   function floaty(y,d,dl,r,c1,c2){ return '<g class="cloud" style="--d:'+d+'s;--dl:'+dl+'s"><g class="cheer" style="--dl:-'+(Math.abs(dl)%1).toFixed(1)+'s">'+pom(0,y,r,c1,c2)+'</g></g>'; }
@@ -2974,7 +2974,7 @@ window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},voic
 /* redraw after the online copy changed under this page */
 function refreshView(){ migrateStore(S); $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
-var BUILD='2026-10-06.1';
+var BUILD='2026-10-06.2';
 function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
   fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
     if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }
