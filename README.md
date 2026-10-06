@@ -55,4 +55,6 @@ It expects Chrome at `C:/Program Files/Google/Chrome/Application/chrome.exe`; ed
 
 Both suites also check that the game is online-only: the code never writes browser storage, cookies, IndexedDB, or caches; every run records any such write and fails on one; and a device with browser storage blocked still plays and saves.
 
+`node audit-mobile.js ../index.html [--shots]` walks every screen and state (player screen, home with the world picker, every store tab and the reset confirm, each play mode with lock-in, hint, sentence, listening and review, the summary, the word list) at six phone sizes plus landscape and tablet, and flags sideways overflow, boxes past the edge, tap targets under 36px, clipped single-line text, text under 12px, inputs under 16px (iOS would zoom), and a Check button out of reach; `--shots` saves screenshots. It must report 0 issues before a publish.
+
 `node qa.js` sweeps the published site instead, also with the stand-in save service: every ocean level and character, a two-tab save merge, reset, eight phone-to-desktop viewports with the play flows, the keyboard-open view, and text contrast in light and dark mode. Pass a file path to run it against a local copy.
