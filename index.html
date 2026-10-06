@@ -891,7 +891,6 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
           <div class="chips store-tabs" id="storeTabs"><button class="chip on" type="button" data-tab="outfit">Outfits</button><button class="chip" type="button" data-tab="decor">Decorations</button><button class="chip" type="button" data-tab="pet">Pets &#9733;</button></div>
           <div class="store-grid" id="storeGrid"></div>
         </div>
-        </div>
         <div class="card settings">
           <h3>Settings</h3>
           <p class="hint-text">For grown-ups.</p>
@@ -1252,8 +1251,10 @@ function migrateChars(st){ var c={}, ws=st.worlds||{}, view=(st.look&&CHAR_KEY[s
    the old record is left in place so the service never sees rewards go down */
 function migrateSoccer(st){ if(st.soccerMoved) return st; var ch=st.chars||{}, any=false;
   Object.keys(ch).forEach(function(k){ if(k.indexOf('soccer:')!==0) return; var r=ch[k], key='birds:titanis', t=ch[key]||(ch[key]={pearls:0,wearLevel:null,spent:0,own:[],wear:[]});
-    t.pearls=(t.pearls||0)+(r.pearls||0); t.spent=(t.spent||0)+(r.spent||0); (r.own||[]).forEach(function(l){ if((t.own=t.own||[]).indexOf(l)<0) t.own.push(l); }); (r.wear||[]).forEach(function(l){ if((t.wear=t.wear||[]).indexOf(l)<0) t.wear.push(l); }); any=true; });
-  if(st.decor&&st.decor.soccer){ if(!st.decor.birds) st.decor.birds=st.decor.soccer; any=true; }
+    t.pearls=(t.pearls||0)+(r.pearls||0); t.spent=(t.spent||0)+(r.spent||0); (r.own||[]).forEach(function(l){ if((t.own=t.own||[]).indexOf(l)<0) t.own.push(l); }); (r.wear||[]).forEach(function(l){ if((t.wear=t.wear||[]).indexOf(l)<0) t.wear.push(l); });
+    if(r.decor){ if(!t.decor) t.decor={own:[],on:[]}; (r.decor.own||[]).forEach(function(l){ if(t.decor.own.indexOf(l)<0) t.decor.own.push(l); }); (r.decor.on||[]).forEach(function(l){ if(t.decor.on.indexOf(l)<0) t.decor.on.push(l); }); }
+    if(r.pets){ if(!t.pets) t.pets=[]; r.pets.forEach(function(id){ if(t.pets.indexOf(id)<0) t.pets.push(id); }); } any=true; });
+  if(st.decor&&st.decor.soccer){ var tb=ch['birds:titanis']||(ch['birds:titanis']={pearls:0,wearLevel:null,spent:0,own:[],wear:[]}); if(!tb.decor) tb.decor={own:[],on:[]}; (st.decor.soccer.own||[]).forEach(function(l){ if(tb.decor.own.indexOf(l)<0) tb.decor.own.push(l); }); (st.decor.soccer.on||[]).forEach(function(l){ if(tb.decor.on.indexOf(l)<0) tb.decor.on.push(l); }); delete st.decor.soccer; any=true; }
   if(st.look==='soccer') st.look='birds'; if(!st.charBirds) st.charBirds='titanis'; if(any) st.soccerMoved=1; return st; }
 function blankWorld(){ return {pearls:0,wearLevel:null}; }
 function defaults(){return {kid:'',charLagoon:'axolotl',charCandy:'bear',charCanopy:'sloth',charOcean:'jellyfish',charBows:'bow',charBoba:'milktea',charBirds:'titanis',grade:'3',sound:true,roundLen:'10',worlds:{lagoon:blankWorld(),candy:blankWorld(),canopy:blankWorld(),ocean:blankWorld(),bows:blankWorld(),boba:blankWorld(),soccer:blankWorld()},words:{},bestStreak:0,totalCorrect:0,epoch:0};}
@@ -1299,7 +1300,7 @@ function mergeState(mem,disk,base){ if(!disk||!base) return mem;
   var mc=mem.chars||migrateChars(mem), dc=disk.chars||migrateChars(disk), bc=base.chars||migrateChars(base), ck={};
   out.chars={}; Object.keys(mc).concat(Object.keys(dc)).forEach(function(k){ ck[k]=1; });
   Object.keys(ck).forEach(function(k){ var m=mc[k]||{pearls:0}, d=dc[k]||{pearls:0}, b=bc[k]||{pearls:0};
-    out.chars[k]={pearls:Math.max(0,Math.max(d.pearls||0,b.pearls||0)+((m.pearls||0)-(b.pearls||0))), wearLevel:(m.wearLevel!==undefined?m.wearLevel:(d.wearLevel===undefined?null:d.wearLevel)), spent:grow(m.spent,d.spent,b.spent), own:union(m.own,d.own), wear:(m.wear?m.wear:(d.wear||[]))}; });
+    out.chars[k]={pearls:Math.max(0,Math.max(d.pearls||0,b.pearls||0)+((m.pearls||0)-(b.pearls||0))), wearLevel:(m.wearLevel!==undefined?m.wearLevel:(d.wearLevel===undefined?null:d.wearLevel)), spent:grow(m.spent,d.spent,b.spent), own:union(m.own,d.own), wear:(m.wear?m.wear:(d.wear||[])), pets:union(m.pets,d.pets), decor:{own:union(m.decor&&m.decor.own,d.decor&&d.decor.own), on:(m.decor&&m.decor.on)?m.decor.on:((d.decor&&d.decor.on)||[])}}; });
   mergeStore(out,mem,disk,base);
   out.totalCorrect=Math.max(0,Math.max(disk.totalCorrect||0,base.totalCorrect||0)+((mem.totalCorrect||0)-(base.totalCorrect||0)));
   out.bestStreak=Math.max(mem.bestStreak||0,disk.bestStreak||0);
@@ -2412,14 +2413,14 @@ function storeItems(k){ var L=WORLDS[k].levels, out=[];
   PET_SCENE.forEach(function(a){ out.push({id:'d'+a.lv,lv:a.lv,kind:'petscene',name:a.name,price:a.price,cur:'mastery'}); });
   return out; }
 function storeItem(id){ var L=storeItems(world()); for(var i=0;i<L.length;i++) if(L[i].id===id) return L[i]; return null; }
-function petsRec(){ if(!S.pets) S.pets={own:[]}; if(!S.pets.own) S.pets.own=[]; return S.pets; }
-function decorRec(k){ if(!S.decor) S.decor={}; var d=S.decor[k||world()]; if(!d) d=S.decor[k||world()]={own:[],on:[]}; if(!d.own) d.own=[]; if(!d.on) d.on=[]; return d; }
+function petsList(){ var r=SW(); if(!r.pets) r.pets=[]; return r.pets; }
+function decorRec(){ var r=SW(); if(!r.decor) r.decor={own:[],on:[]}; if(!r.decor.own) r.decor.own=[]; if(!r.decor.on) r.decor.on=[]; return r.decor; }
 function wearList(){ var r=SW(); if(!r.own) r.own=[]; if(!r.wear) r.wear=[]; return r.wear; }
 function coins(){ var r=SW(); return (r.pearls||0)-(r.spent||0); }
 function masteryEarned(){ return countMastered(WORDS3)+countMastered(WORDS4); }
 function masteryPts(){ return masteryEarned()-(S.mspent||0); }
 function isScene(it){ return it.kind==='decor'||it.kind==='petscene'; }
-function owns(it){ if(it.cur==='mastery') return petsRec().own.indexOf(it.id)>=0; return (isScene(it)?decorRec().own:(SW().own||[])).indexOf(it.lv)>=0; }
+function owns(it){ if(it.cur==='mastery') return petsList().indexOf(it.id)>=0; return (isScene(it)?decorRec().own:(SW().own||[])).indexOf(it.lv)>=0; }
 function showing(it){ return (isScene(it)?decorRec().on:wearList()).indexOf(it.lv)>=0; }
 function canAfford(it){ return it.cur==='mastery'?masteryPts()>=it.price:coins()>=it.price; }
 /* wearing: one item per slot (a new hat replaces the old one); pet things need the pet out */
@@ -2430,14 +2431,15 @@ function wear(lv,on){ var w=wearList(), slot=SLOT_OF[lv], i=w.indexOf(lv);
   if(w.indexOf(lv)<0) w.push(lv); return true; }
 function place(lv,on){ var d=decorRec(), i=d.on.indexOf(lv); if(on&&i<0) d.on.push(lv); if(!on&&i>=0) d.on.splice(i,1); }
 function buy(it){ if(owns(it)||!canAfford(it)) return false;
-  if(it.cur==='mastery'){ S.mspent=(S.mspent||0)+it.price; petsRec().own.push(it.id); }
+  if(it.cur==='mastery'){ S.mspent=(S.mspent||0)+it.price; petsList().push(it.id); }
   else { var r=SW(); r.spent=(r.spent||0)+it.price; if(isScene(it)) decorRec().own.push(it.lv); else { if(!r.own) r.own=[]; r.own.push(it.lv); } }
   if(isScene(it)) place(it.lv,true); else wear(it.lv,true);
   save(); return true; }
 /* what a kid already reached by level before the store existed is theirs: those outfits, that look, that scenery, and any pet.
    Runs on a freshly loaded save, so it reads only that save. */
 function oldLook(l,wl){ if(l>wl) return false; var t=SLOTS[SLOT_OF[l]]||[l]; for(var i=0;i<t.length;i++){ if(t[i]>l&&t[i]<=wl) return false; } return true; }
-function migrateStore(st){ if(st.storeV) return st; st.storeV=1; if(!st.pets) st.pets={own:[]}; if(!st.decor) st.decor={};
+function migrateStore(st){ migrateStore1(st); return migrateStore2(st); }
+function migrateStore1(st){ if(st.storeV) return st; st.storeV=1; if(!st.pets) st.pets={own:[]}; if(!st.decor) st.decor={};
   function mastered(list){ var n=0; for(var i=0;i<list.length;i++){ var x=st.words&&st.words[list[i].w]; if(x&&(x.mastered||x.streak>=3)) n++; } return n; }
   var m=Math.max(mastered(WORDS3),mastered(WORDS4)), petMax=0, ch=st.chars||{};
   function lvFor(p,k){ var L=WORLDS[k].levels, l=0; for(var i=0;i<L.length;i++){ if(p>=L[i].p&&m>=(L[i].m||0)) l=i+1; else break; } return l; }
@@ -2445,6 +2447,16 @@ function migrateStore(st){ if(st.storeV) return st; st.storeV=1; if(!st.pets) st
     r.own=[]; r.wear=[]; r.spent=r.spent||0; for(var l=1;l<=lv;l++){ if(!PET_LV[l]) r.own.push(l); if(oldLook(l,wl)) r.wear.push(l); }
     if(lv>petMax) petMax=lv; var d=st.decor[k]||(st.decor[k]={own:[],on:[]}); for(l=1;l<=lv;l++){ if(d.own.indexOf(l)<0){ d.own.push(l); d.on.push(l); } } });
   if(petMax>=12&&st.pets.own.indexOf('o12')<0) st.pets.own.push('o12'); if(petMax>=17&&st.pets.own.indexOf('o17')<0) st.pets.own.push('o17');
+  return st; }
+/* every character starts the store from nothing: decorations move from the world to the character picked there,
+   and pets move from the kid to the character they were playing, once */
+function migrateStore2(st){ if((st.storeV||0)>=2) return st; st.storeV=2; var ch=st.chars||(st.chars={});
+  function rec(k,id){ var key=k+':'+id; if(!ch[key]) ch[key]={pearls:0,wearLevel:null,spent:0,own:[],wear:[]}; return ch[key]; }
+  /* they go to the character that earned the most there (the picked one when nobody has) */
+  function top(k){ var best=null, bp=-1; Object.keys(ch).forEach(function(key){ if(k&&key.indexOf(k+':')!==0) return; if((ch[key].pearls||0)>bp){ bp=ch[key].pearls||0; best=key; } }); return best; }
+  var d=st.decor||{}; Object.keys(d).forEach(function(k){ if(!CHAR_KEY[k]||!d[k]) return; var tk=top(k), r=tk?ch[tk]:rec(k,st[CHAR_KEY[k]]||CHAR_DEF[k]); if(!r.decor) r.decor={own:[],on:[]};
+    (d[k].own||[]).forEach(function(l){ if(r.decor.own.indexOf(l)<0) r.decor.own.push(l); }); (d[k].on||[]).forEach(function(l){ if(r.decor.on.indexOf(l)<0) r.decor.on.push(l); }); delete d[k]; });
+  var own=(st.pets&&st.pets.own)||[]; if(own.length){ var view=(st.look&&CHAR_KEY[st.look])?st.look:(st.theme||(st.grade==='4'?'candy':'lagoon')), ta=top(null), r=ta?ch[ta]:rec(view,st[CHAR_KEY[view]]||CHAR_DEF[view]); if(!r.pets) r.pets=[]; own.forEach(function(id){ if(r.pets.indexOf(id)<0) r.pets.push(id); }); st.pets.own=[]; }
   return st; }
 /* the store card on the home screen */
 var STORE_TAB='outfit', PEEK=null, peekT=null;
@@ -2804,7 +2816,7 @@ window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},voic
 /* redraw after the online copy changed under this page */
 function refreshView(){ migrateStore(S); $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
-var BUILD='2026-10-05.2';
+var BUILD='2026-10-05.3';
 function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
   fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
     if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }

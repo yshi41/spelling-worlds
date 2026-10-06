@@ -27,7 +27,7 @@ export function mergeStore(out, mem, disk, base) {
   new Set(Object.keys(md).concat(Object.keys(dd))).forEach(k => { const m = md[k], d = dd[k] || {}; out.decor[k] = { own: union(m && m.own, d.own), on: (m && m.on) ? m.on : (d.on || []) }; });
   return out;
 }
-const charExtras = (m, d, b) => ({ spent: grow(m.spent, d.spent, b.spent), own: union(m.own, d.own), wear: m.wear ? m.wear : (d.wear || []) });
+const charExtras = (m, d, b) => ({ spent: grow(m.spent, d.spent, b.spent), own: union(m.own, d.own), wear: m.wear ? m.wear : (d.wear || []), pets: union(m.pets, d.pets), decor: { own: union(m.decor && m.decor.own, d.decor && d.decor.own), on: (m.decor && m.decor.on) ? m.decor.on : ((d.decor && d.decor.on) || []) } });
 export function mergeState(mem, disk, base) {
   const me = mem.epoch || 0, de = disk.epoch || 0, be = base.epoch || 0;
   if (me !== be) return mem;
