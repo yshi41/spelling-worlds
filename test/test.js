@@ -18,7 +18,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const waitSync = async (pg) => { for (let i = 0; i < 80; i++) { if (await pg.evaluate(() => !window.__spelling || __spelling.net.idle())) return true; await sleep(100); } return false; };
   const _reload = page.reload.bind(page); page.reload = async (o) => { await waitSync(page); return _reload(o); };
   /* the progress of the character a save is playing, the way the game finds it */
-  const CK = { lagoon: 'charLagoon', candy: 'charCandy', canopy: 'charCanopy', ocean: 'charOcean', bows: 'charBows', boba: 'charBoba', birds: 'charBirds' }, CD = { lagoon: 'axolotl', candy: 'bear', canopy: 'sloth', ocean: 'jellyfish', bows: 'bow', boba: 'milktea', birds: 'titanis' };
+  const CK = { lagoon: 'charLagoon', candy: 'charCandy', canopy: 'charCanopy', ocean: 'charOcean', bows: 'charBows', boba: 'charBoba', birds: 'charBirds', cheer: 'charCheer' }, CD = { lagoon: 'axolotl', candy: 'bear', canopy: 'sloth', ocean: 'jellyfish', bows: 'bow', boba: 'milktea', birds: 'titanis', cheer: 'pompom' };
   const recOf = (st, make) => { const w = (st.look && CK[st.look]) ? st.look : (st.theme || (st.grade === '4' ? 'candy' : 'lagoon')), k = w + ':' + (st[CK[w]] || CD[w]);
     if (!st.chars) st.chars = {}; if (!st.chars[k]) { if (!make) return { pearls: 0 }; st.chars[k] = { pearls: 0, wearLevel: null }; } return st.chars[k]; };
   const online = async (id) => { await sleep(700); await waitSync(page); return cloud.store[id] && cloud.store[id].state; };
@@ -590,34 +590,36 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   }
   await page.screenshot({ path: 'amy-10.png' });
   ok(recOf(await online('amy')).pearls === 1300, 'Amy\'s progress is saved online');
-  ok(await count('.world-chip') === 7 && await count('.world-chip[data-look="boba"]') === 1, 'the boba shop is in the world picker');
+  ok(await count('.world-chip') === 8 && await count('.world-chip[data-look="boba"]') === 1, 'the boba shop is in the world picker');
   await pickPlayer('vera'); const lvV = await text('#lbLevel');
   await chooseWorld('boba');
   ok(await world() === 'boba' && await text('#lbLevel') === 'Level 0', 'Vera starts the boba shop at level 0');
   await chooseWorld('canopy');
   ok(await world() === 'canopy' && await text('#lbLevel') === lvV, 'and her rainforest level is still there');
 
-  console.log('12h2. Hallie and the terror bird valley');
+  console.log('12h2. Hallie and the cheer gym');
   await pickPlayer('hallie');
   ok(await text('.home-badge') === '4th grade words', 'Hallie starts on the 4th grade words');
-  ok(await world() === 'birds' && await text('#brand') === 'Spelling Terror Birds' && await count('.char-chip') === 6, 'Hallie plays in the terror bird valley with six characters');
-  for (const id of ['titanis', 'kelenken', 'gastornis', 'phorusrhacos', 'brontornis', 'psilopterus']) {
+  ok(await world() === 'cheer' && await text('#brand') === 'Spelling Cheer' && await count('.char-chip') === 6, 'Hallie plays in the cheer gym with six squad characters');
+  for (const id of ['pompom', 'megaphone', 'spiritstar', 'sneaker', 'trophy', 'rosette']) {
     await page.click('.char-chip[data-char="' + id + '"]'); await sleep(150);
     ok(await attr('.char-chip.on', 'data-char') === id && await count('#axoHome svg path, #axoHome svg ellipse, #axoHome svg circle, #axoHome svg rect') > 4, 'soccer character draws: ' + id);
   }
-  await page.click('.char-chip[data-char="titanis"]'); await sleep(150);
+  await page.click('.char-chip[data-char="pompom"]'); await sleep(150);
   for (const [p, lv] of [[30, 1], [480, 6], [1300, 10]]) {
     await page.evaluate(p => { __spelling.SW().pearls = p; __spelling.SW().wearLevel = null; __spelling.save(); }, p); await pickPlayer('hallie');
     ok(await text('#lbLevel') === 'Level ' + lv && await page.evaluate(p => __spelling.store.coins() === p - (__spelling.SW().spent || 0), p), 'Hallie level ' + lv + ': the rank follows her soccer balls and the store shows what is left to spend');
   }
   await page.screenshot({ path: 'hallie-10.png' });
   ok(recOf(await online('hallie')).pearls === 1300, 'Hallie\'s progress is saved online');
-  ok(await count('.world-chip[data-look="birds"]') === 1, 'the terror bird valley is in the world picker');
+  ok(await count('.world-chip[data-look="birds"]') === 1, 'the terror bird valley is still in the world picker');
 
   console.log('12h3. What Hallie earned in the soccer stadium moves to the valley');
   cloud.store.hallie = { rev: 23, state: { theme: 'soccer', charSoccer: 'soccerball', storeV: 1, chars: { 'soccer:soccerball': { pearls: 180, wearLevel: null, spent: 20, own: [1], wear: [1] } }, decor: { soccer: { own: [1], on: [1] } }, pets: { own: [] }, mspent: 0, words: {} } };
   await page.reload({ waitUntil: 'load' }); await sleep(600);
   await page.click('.profile-card[data-id="hallie"]'); await sleep(600);
+  ok(await world() === 'cheer', 'Hallie opens in her cheer gym');
+  await chooseWorld('birds');
   ok(await world() === 'birds' && await attr('.char-chip.on', 'data-char') === 'titanis' && (await T()).pearls === 180 && await page.evaluate(() => __spelling.store.coins() === 160 && (__spelling.SW().own || []).indexOf(1) >= 0 && __spelling.SW().decor.on.indexOf(1) >= 0), 'her 180 soccer balls are 180 feathers on Titanis, with the outfit and decoration she had bought');
   ok(await page.evaluate(() => __spelling.S.soccerMoved === 1 && __spelling.S.chars['soccer:soccerball'].pearls === 180), 'the move is marked done and the old record is kept, so the service never sees rewards go down');
   await sleep(900); await waitSync(page);
@@ -630,8 +632,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.evaluate(() => { document.getElementById('worldBtn').click(); }); await sleep(150);
   await page.evaluate(() => { document.querySelector('.world-chip[data-look="candy"]').click(); }); await sleep(200);
   ok(await world() === 'candy' && await page.evaluate(() => !__spelling.S.look || __spelling.S.look === 'lagoon'), 'Riley tries the candy world without saving it');
-  await page.evaluate(() => document.getElementById('switchBtn').click()); await sleep(300);
-  ok(await page.evaluate(() => Array.from(document.querySelectorAll('.profile-card')).map(e => e.getAttribute('data-id') + ':' + (e.querySelector('svg.axo') ? 'axo' : '?')).length === 7) && await world() === 'lagoon', 'the player screen comes back with the preview cleared');
+  await page.evaluate(() => document.getElementById('switchBtn').click()); await sleep(300); await away();
+  ok(await count('.profile-card') === 7 && await world() === 'lagoon', 'the player screen comes back with the preview cleared (' + await count('.profile-card') + ' cards, world ' + await world() + ', ' + await page.evaluate(() => 'kid=' + __spelling.S.kid + ' look=' + __spelling.S.look + ' theme=' + __spelling.S.theme + ' current=' + __spelling.P.current + ' sameAsLive=' + (__spelling.S === __spelling.LIVE[__spelling.P.current]) + ' ocean=' + JSON.stringify(Object.keys(__spelling.LIVE).map(id => id + ':' + (__spelling.LIVE[id].kid || '?')))) + ')');
   const tileWorlds = await page.evaluate(() => { const H = __spelling; return H.LIVE && Object.keys(H.LIVE).map(id => id + ':' + (H.LIVE[id].look || H.LIVE[id].theme)).join(' '); });
   ok(!/candy/.test(tileWorlds.replace('charlie:candy', '')), 'nobody but Charlie is in the candy world (' + tileWorlds + ')');
   ok(await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.keys(__spelling.LIVE).filter(id => id !== 'riley').map(id => [id, Object.keys(__spelling.LIVE[id].chars || {}).sort()])))) === keysBefore, 'and no stray record was created on the other kids');
@@ -696,7 +698,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     await page.evaluate(() => { const S = __spelling.S; S.epoch = (S.epoch || 0) + 1; S.chars = {}; __spelling.SW().pearls = 3300; __spelling.WORDS4.forEach(w => { S.words[w.w] = { mastered: true, streak: 3, right: 3, wrong: 0, seen: 3 }; }); __spelling.save(); });
     await pickPlayer('amy');
     ok(await text('#lbLevel') === 'Level 20' && await text('.char-chip[data-char="turtle"] .cc-lv') === 'MAX' && await page.$eval('.char-chip[data-char="turtle"]', e => e.classList.contains('maxed')), 'a character at level 20 shows MAX');
-    ok(/Maxed: 1 of 42/.test(await text('#charMax')), 'the home screen counts maxed characters (' + await text('#charMax') + ')');
+    ok(/Maxed: 1 of 48/.test(await text('#charMax')), 'the home screen counts maxed characters (' + await text('#charMax') + ')');
     ok(await text('.char-chip[data-char="frog"] .cc-lv') === 'Lv 0', 'the other characters show their own levels');
     await page.click('.char-chip[data-char="frog"]'); await sleep(400);
     ok(await text('#lbLevel') === 'Level 0' && await text('#pearlCount') === '0', 'picking another character shows that character\'s own level');
