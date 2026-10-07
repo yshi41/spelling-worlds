@@ -544,7 +544,7 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 .say-or::before,.say-or::after{content:"";flex:1;border-top:2px dashed var(--line)}
 .say-input{font-family:var(--display),sans-serif;font-weight:600;font-size:1.3rem;letter-spacing:.04em;text-align:center;width:100%;max-width:440px;border:3px solid var(--line);border-radius:16px;padding:10px 12px;background:var(--surface-2);color:var(--ink)}
 .say-input:focus{border-color:var(--sky);outline:none}
-.mic-btn.listening.warming{background:var(--gold-deep);color:var(--gold-ink);animation:none}
+.mic-btn.listening.warming,.mic-btn.listening.muted{background:var(--gold-deep);color:var(--gold-ink);animation:none}
 #checkBtn.ready{animation:readyPulse 1.1s ease-in-out infinite}
 @keyframes readyPulse{50%{transform:scale(1.05)}}
 @media (max-width:720px){ .say-input{font-size:1.1rem;padding:8px 10px} }
@@ -1501,12 +1501,12 @@ var Voice=(function(){
   function pickVoice(vs){ var best=null, bs=-Infinity; for(var k=0;k<vs.length;k++){ var sc=score(vs[k]); if(sc===-1) continue; if(sc>bs){ bs=sc; best=vs[k]; } } return best; }
   function choose(){ if(!ok) return; var vs=speechSynthesis.getVoices(); if(!vs||!vs.length) return; voice=pickVoice(vs); }
   if(ok){ choose(); try{ speechSynthesis.onvoiceschanged=choose; }catch(e){} }
-  function say(text,rate,done){ Clips.stop(); if(!ok) return false; try{ if(typeof Say!=='undefined'&&Say&&Say.on) Say.stop(); }catch(e){} try{ var busy=speechSynthesis.speaking||speechSynthesis.pending; if(busy) speechSynthesis.cancel();
+  function say(text,rate,done){ Clips.stop(); if(!ok) return false; try{ if(typeof Say!=='undefined'&&Say&&Say.on) Say.mute(); }catch(e){} try{ var busy=speechSynthesis.speaking||speechSynthesis.pending; if(busy) speechSynthesis.cancel();
     var u=new SpeechSynthesisUtterance(text); if(done){ u.onend=function(){ done(); }; u.onerror=function(){ done(); }; } u.rate=rate||0.88; u.pitch=1.12; u.lang='en-US'; if(voice) u.voice=voice; if(busy) setTimeout(function(){ try{ speechSynthesis.speak(u); }catch(e){} },80); else speechSynthesis.speak(u); }catch(e){ return false; } return true; }
   function wp(w,kind){ return 'w/'+(WORDS3.indexOf(w)>=0?'3':'4')+'/'+w.w.toLowerCase()+'-'+kind; }
   function slug(t){ return t.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'').slice(0,60); }
   /* a recording first; if it is missing or audio is blocked, the device voice says the same words */
-  function clip(paths,gap,text,rate,done){ try{ if(typeof Say!=='undefined'&&Say&&Say.on) Say.stop(); }catch(e){} if(ok){ try{ speechSynthesis.cancel(); }catch(e){} }
+  function clip(paths,gap,text,rate,done){ try{ if(typeof Say!=='undefined'&&Say&&Say.on) Say.mute(); }catch(e){} if(ok){ try{ speechSynthesis.cancel(); }catch(e){} }
     var went=Clips.play(paths,gap,function(played){ if(played){ if(done) done(); } else if(!say(text,rate,done)&&done) done(); });
     return went||say(text,rate,done); }
   return { ok:ok, say:say, pickVoice:pickVoice, clip:clip,
@@ -2124,6 +2124,57 @@ function canopyPieces(p){
   return {capePath:cape, glow:glow, behind:behind, front:hats+neck+eyes+sh+wand+piece(10,'halo','halo1',halo)+piece(9,'aura','aura',aura)};
 }
 /* levels 11-20 character extras, shared by every world and every character */
+/* shared accessories: drawn once on the common anchor points (head top near y 56, eyes at 103/157,112, mouth y 146, body centre 130,205,
+   feet near y 250), sold in every world's store for that world's rewards, so each spot has several choices */
+var CAPE_PATH='M72 168 Q46 212 58 250 L202 250 Q214 212 188 168 Q130 192 72 168 Z';
+function accFlower(x,y,r,c,mid){ var s=''; for(var i=0;i<5;i++){ var a=i*Math.PI*2/5; s+=svgDot((x+Math.cos(a)*r).toFixed(1),(y+Math.sin(a)*r).toFixed(1),r*0.75,c); } return s+svgDot(x,y,r*0.6,mid||'#FFD23F'); }
+function accShoe(x,c,top){ return '<path d="M'+(x-22)+' 252 Q'+(x-24)+' 236 '+(x-6)+' 236 L'+(x+10)+' 236 Q'+(x+26)+' 238 '+(x+26)+' 252 Z" fill="'+c+'"/><rect x="'+(x-24)+'" y="250" width="52" height="8" rx="4" fill="'+(top||'#4A2C3A')+'"/>'; }
+var SHARED_ACC=[
+ {lv:24,slot:'hat',name:'Beanie',price:60,d:function(){ return '<path d="M74 80 Q130 8 186 80 Z" fill="#E8476B"/><path d="M96 54 L94 80 M114 38 L112 80 M130 32 L130 80 M146 38 L148 80 M164 54 L166 80" stroke="#C4186E" stroke-width="3" opacity=".6"/><rect x="68" y="72" width="124" height="18" rx="9" fill="#B3243F"/>'+svgDot(130,14,13,'#fff','#E6E6E6'); }},
+ {lv:25,slot:'hat',name:'Top Hat',price:90,d:function(){ return '<rect x="86" y="-14" width="88" height="80" rx="6" fill="#2D2A1F"/><rect x="60" y="60" width="140" height="14" rx="7" fill="#2D2A1F"/><rect x="86" y="44" width="88" height="14" fill="#E8476B"/><path d="M96 -6 L96 40" stroke="#fff" stroke-width="4" opacity=".25"/>'; }},
+ {lv:26,slot:'hat',name:'Baseball Cap',price:60,d:function(){ return '<path d="M78 72 Q130 12 182 72 Z" fill="#3B66E6"/><path d="M150 66 Q212 58 226 78 Q188 84 150 80 Z" fill="#2B4FB8"/><rect x="76" y="66" width="108" height="10" rx="5" fill="#2B4FB8"/><path d="M130 14 L130 66" stroke="#2B4FB8" stroke-width="3"/>'+svgDot(130,14,5,'#2B4FB8'); }},
+ {lv:27,slot:'hat',name:'Flower Crown',price:80,d:function(){ var s='<path d="M68 72 Q130 48 192 72" stroke="#5E9E4A" stroke-width="5" fill="none"/>'; [[78,70,'#FF7EB6'],[100,58,'#FFD23F'],[130,50,'#B48CFF'],[160,58,'#FF7EB6'],[182,70,'#7CD4FF']].forEach(function(q){ s+=accFlower(q[0],q[1],7,q[2],'#fff'); }); return s; }},
+ {lv:28,slot:'hat',name:'Bucket Hat',price:60,d:function(){ return '<path d="M84 70 Q130 26 176 70 Z" fill="#8CC56F"/><path d="M56 70 L204 70 L192 94 L68 94 Z" fill="#5E9A4E"/><path d="M86 66 Q130 54 174 66" stroke="#4F8A3E" stroke-width="4" fill="none"/>'; }},
+ {lv:29,slot:'hat',name:'Unicorn Horn',price:120,d:function(){ return '<path d="M116 62 L130 -12 L144 62 Z" fill="#FFE9F3" stroke="#E0338A" stroke-width="2.5" stroke-linejoin="round"/><path d="M121 40 L139 36 M119 50 L141 46 M124 26 L136 24" stroke="#E0338A" stroke-width="2.5"/>'+svgSpark(108,20,5,'#FFD23F',0.2)+svgSpark(154,14,5,'#B48CFF',0.9); }},
+ {lv:30,slot:'neck',name:'Bow Tie',price:50,d:function(){ return '<path d="M130 174 L100 160 L100 188 Z M130 174 L160 160 L160 188 Z" fill="#E8476B"/>'+svgDot(130,174,7,'#C4186E'); }},
+ {lv:31,slot:'neck',name:'Cozy Scarf',price:60,d:function(){ return '<path d="M84 160 Q130 192 176 160 L180 178 Q130 212 80 178 Z" fill="#E07A2E"/><path d="M158 178 L168 230 L146 230 L140 184 Z" fill="#E07A2E"/><path d="M96 170 Q130 198 164 170 M148 200 L160 198 M151 214 L163 212" stroke="#FFD23F" stroke-width="5" fill="none"/><path d="M148 230 L146 240 M156 230 L156 240 M164 230 L166 240" stroke="#E07A2E" stroke-width="3" stroke-linecap="round"/>'; }},
+ {lv:32,slot:'neck',name:'Pearl String',price:70,d:function(){ var s=''; for(var i=0;i<9;i++){ var t=i/8, x=94+t*72, y=160+Math.sin(t*Math.PI)*34; s+=svgDot(x.toFixed(1),y.toFixed(1),6,'#FFF6E6','#E6D3B3'); } return s; }},
+ {lv:33,slot:'neck',name:'Heart Locket',price:70,d:function(){ return '<path d="M96 160 Q130 196 164 160" stroke="#F2C94C" stroke-width="3" fill="none"/><path d="M130 208 c-12 -14 -26 -4 -14 10 l14 14 l14 -14 c12 -14 -2 -24 -14 -10 Z" fill="#F2C94C" stroke="#D9A72E" stroke-width="2"/>'+svgDot(130,206,3,'#fff'); }},
+ {lv:34,slot:'neck',name:'Bandana',price:50,d:function(){ return '<path d="M84 158 Q130 190 176 158 L166 178 Q130 204 94 178 Z" fill="#E8476B"/>'+[[110,172],[130,180],[150,172],[120,188],[140,188]].map(function(q){ return svgDot(q[0],q[1],3,'#fff'); }).join('')+'<path d="M166 178 L186 196 L172 198 Z" fill="#C4186E"/>'; }},
+ {lv:35,slot:'eyes',name:'Round Glasses',price:50,d:function(){ return '<circle cx="103" cy="112" r="21" fill="rgba(255,255,255,.25)" stroke="#2D2A1F" stroke-width="4"/><circle cx="157" cy="112" r="21" fill="rgba(255,255,255,.25)" stroke="#2D2A1F" stroke-width="4"/><path d="M124 112 L136 112 M82 108 Q66 102 60 94 M178 108 Q194 102 200 94" stroke="#2D2A1F" stroke-width="4" fill="none" stroke-linecap="round"/>'; }},
+ {lv:36,slot:'eyes',name:'Heart Shades',price:60,d:function(){ function h(x){ return '<path d="M'+x+' 128 c-18 -16 -34 -2 -20 14 l20 18 l20 -18 c14 -16 -2 -30 -20 -14 Z" transform="translate(0 -20)" fill="rgba(255,90,150,.6)" stroke="#C4186E" stroke-width="3"/>'; } return h(103)+h(157)+'<path d="M121 112 L139 112 M80 108 Q64 102 58 94 M180 108 Q196 102 202 94" stroke="#C4186E" stroke-width="3.5" fill="none" stroke-linecap="round"/>'; }},
+ {lv:37,slot:'eyes',name:'Star Shades',price:60,d:function(){ return svgStar(103,112,26,12,'rgba(255,210,63,.7)')+svgStar(157,112,26,12,'rgba(255,210,63,.7)')+'<path d="M120 112 L140 112 M80 106 Q64 100 58 92 M180 106 Q196 100 202 92" stroke="#D9A72E" stroke-width="3.5" fill="none" stroke-linecap="round"/>'; }},
+ {lv:38,slot:'eyes',name:'Cool Shades',price:70,d:function(){ return '<rect x="80" y="98" width="46" height="30" rx="12" fill="rgba(30,30,40,.85)"/><rect x="134" y="98" width="46" height="30" rx="12" fill="rgba(30,30,40,.85)"/><path d="M126 110 L134 110 M80 106 Q64 100 58 92 M180 106 Q196 100 202 92" stroke="#1E1E28" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M90 106 L100 102 M144 106 L154 102" stroke="#fff" stroke-width="3" opacity=".5" stroke-linecap="round"/>'; }},
+ {lv:39,slot:'eyes',name:'Pirate Eye Patch',price:50,d:function(){ return '<path d="M62 104 L140 110 M174 104 L198 96" stroke="#2D2A1F" stroke-width="4" stroke-linecap="round"/>'+svgDot(157,112,19,'#2D2A1F')+svgStar(157,112,7,3,'#FFD23F'); }},
+ {lv:40,slot:'cape',back:true,name:'Hero Cape',price:90,d:function(){ return '<path d="'+CAPE_PATH+'" fill="#E8476B"/><path d="M84 168 Q130 184 176 168 L172 160 Q130 176 88 160 Z" fill="#C4186E"/>'; }},
+ {lv:41,slot:'cape',back:true,name:'Starry Night Cape',price:110,d:function(){ return '<path d="'+CAPE_PATH+'" fill="#1E2A5A"/>'+[[90,200],[120,224],[152,214],[176,200],[132,242],[104,238],[164,238]].map(function(q,i){ return svgStar(q[0],q[1],i%2?6:4,i%2?2.5:1.8,'#FFE24A'); }).join(''); }},
+ {lv:42,slot:'cape',back:true,name:'Polka Dot Cape',price:90,d:function(){ return '<path d="'+CAPE_PATH+'" fill="#7B4BD6"/>'+[[88,196],[110,220],[134,200],[158,222],[180,198],[122,240],[164,242]].map(function(q){ return svgDot(q[0],q[1],6,'#fff'); }).join(''); }},
+ {lv:43,slot:'cape',back:true,name:'Royal Cape',price:140,d:function(){ var s='<path d="'+CAPE_PATH+'" fill="#6A1B9A" stroke="#F2C94C" stroke-width="4"/>'; for(var i=0;i<8;i++) s+=svgDot(66+i*18,248,7,'#fff'); return s+svgDot(130,168,6,'#F2C94C'); }},
+ {lv:44,slot:'wand',name:'Magic Wand',price:70,d:function(){ return '<path d="M184 200 Q206 190 218 158" stroke="#2D2A1F" stroke-width="4" fill="none" stroke-linecap="round"/>'+svgStar(222,150,16,7,'#FFD23F')+svgSpark(240,136,5,'#fff',0.3)+svgSpark(206,138,4,'#FF7EB6',0.9); }},
+ {lv:45,slot:'wand',name:'Bubble Wand',price:70,d:function(){ return '<path d="M184 200 Q206 190 218 158" stroke="#7B4BD6" stroke-width="4" fill="none" stroke-linecap="round"/><circle cx="222" cy="146" r="14" fill="rgba(180,230,255,.45)" stroke="#7B4BD6" stroke-width="4"/>'+svgDot(246,124,8,'rgba(180,230,255,.6)','#fff')+svgDot(236,106,5,'rgba(180,230,255,.6)','#fff'); }},
+ {lv:46,slot:'wand',name:'Daisy',price:50,d:function(){ return '<path d="M184 200 Q206 190 218 158" stroke="#5E9E4A" stroke-width="4" fill="none" stroke-linecap="round"/><ellipse cx="200" cy="184" rx="9" ry="4" transform="rotate(-30 200 184)" fill="#5E9E4A"/>'+accFlower(222,148,10,'#fff','#FFD23F'); }},
+ {lv:47,slot:'wand',name:'Little Flag',price:50,d:function(){ return '<path d="M184 200 Q206 190 218 150" stroke="#8A5A2B" stroke-width="4" fill="none" stroke-linecap="round"/><path d="M218 150 L256 162 L218 176 Z" fill="#3FD9A8"/>'+svgStar(232,163,6,2.5,'#fff'); }},
+ {lv:48,slot:'wings',back:true,name:'Butterfly Wings',price:120,d:function(){ function w(sx){ return '<g transform="translate(130 0) scale('+sx+' 1) translate(-130 0)"><ellipse cx="62" cy="176" rx="30" ry="44" transform="rotate(-20 62 176)" fill="#FF7EB6" stroke="#E0338A" stroke-width="3"/><ellipse cx="66" cy="222" rx="24" ry="30" transform="rotate(15 66 222)" fill="#B48CFF" stroke="#7B4BD6" stroke-width="3"/>'+svgDot(58,172,9,'#FFD23F')+svgDot(66,222,6,'#fff')+'</g>'; } return w(1)+w(-1); }},
+ {lv:49,slot:'wings',back:true,name:'Angel Wings',price:140,d:function(){ function w(sx){ return '<g transform="translate(130 0) scale('+sx+' 1) translate(-130 0)"><path d="M80 176 Q20 150 10 200 Q30 196 40 206 Q24 226 30 244 Q52 236 62 232 Q58 246 70 250 Q86 230 84 196 Z" fill="#fff" stroke="#DCE6F0" stroke-width="3" stroke-linejoin="round"/></g>'; } return w(1)+w(-1); }},
+ {lv:50,slot:'wings',back:true,name:'Bat Wings',price:120,d:function(){ function w(sx){ return '<g transform="translate(130 0) scale('+sx+' 1) translate(-130 0)"><path d="M80 178 Q30 150 14 204 Q28 196 36 210 Q44 226 56 230 Q66 236 78 236 Z" fill="#3B2A5C" stroke="#2D2A1F" stroke-width="3" stroke-linejoin="round"/></g>'; } return w(1)+w(-1); }},
+ {lv:51,slot:'wings',back:true,name:'Fairy Wings',price:120,d:function(){ function w(sx){ return '<g transform="translate(130 0) scale('+sx+' 1) translate(-130 0)"><ellipse cx="66" cy="174" rx="22" ry="50" transform="rotate(-28 66 174)" fill="rgba(180,230,255,.55)" stroke="#7CD4FF" stroke-width="3"/><ellipse cx="72" cy="226" rx="16" ry="30" transform="rotate(12 72 226)" fill="rgba(200,240,255,.55)" stroke="#7CD4FF" stroke-width="3"/></g>'; } return w(1)+w(-1)+svgSpark(40,150,5,'#fff',0.4)+svgSpark(222,150,5,'#fff',1.1); }},
+ {lv:52,slot:'shoulders',back:true,name:'Backpack',price:80,d:function(){ return '<rect x="92" y="172" width="76" height="70" rx="16" fill="#3B66E6"/><rect x="104" y="186" width="52" height="26" rx="8" fill="#2B4FB8"/><path d="M96 180 Q90 220 100 246 M164 180 Q170 220 160 246" stroke="#2B4FB8" stroke-width="8" fill="none" stroke-linecap="round"/>'; }},
+ {lv:53,slot:'shoulders',name:'Shoulder Parrot',price:110,d:function(){ return '<ellipse cx="186" cy="176" rx="12" ry="16" fill="#3FD9A8"/><circle cx="186" cy="158" r="10" fill="#E8476B"/><path d="M194 158 L204 162 L194 166 Z" fill="#FFD23F"/>'+svgDot(188,156,2.2,'#2D2A1F')+'<path d="M180 190 L176 204 M186 192 L186 206" stroke="#3B66E6" stroke-width="4" stroke-linecap="round"/><path d="M186 166 Q198 178 192 190" stroke="#7B4BD6" stroke-width="5" fill="none" stroke-linecap="round"/>'; }},
+ {lv:54,slot:'shoulders',name:'Golden Epaulettes',price:90,d:function(){ return [[80,186],[180,186]].map(function(q){ return '<ellipse cx="'+q[0]+'" cy="'+q[1]+'" rx="18" ry="10" fill="#F2C94C" stroke="#D9A72E" stroke-width="2"/>'+[-10,-4,2,8].map(function(dx){ return '<path d="M'+(q[0]+dx)+' '+(q[1]+6)+' L'+(q[0]+dx)+' '+(q[1]+18)+'" stroke="#F2C94C" stroke-width="3" stroke-linecap="round"/>'; }).join(''); }).join(''); }},
+ {lv:55,slot:'aura',back:true,name:'Rainbow Glow',price:110,d:function(){ return RAINBOW.map(function(c,i){ return '<circle cx="130" cy="130" r="'+(112-i*9)+'" fill="none" stroke="'+c+'" stroke-width="9" opacity=".45"/>'; }).join(''); }},
+ {lv:56,slot:'aura',back:true,name:'Fire Glow',price:110,d:function(){ return svgDot(130,130,100,'rgba(255,120,40,.35)')+[[40,120],[220,110],[60,60],[200,60],[130,30]].map(function(q,i){ return '<path d="M'+q[0]+' '+(q[1]+14)+' q-8 -12 0 -24 q2 10 6 10 q4 -6 2 -14 q10 12 -2 28 Z" fill="'+(i%2?'#FFD23F':'#FF8A3C')+'"/>'; }).join(''); }},
+ {lv:57,slot:'aura',back:true,name:'Snowflake Sparkle',price:110,d:function(){ var s=svgDot(130,130,100,'rgba(160,220,255,.3)'); [[40,90],[214,80],[50,190],[212,196],[130,22]].forEach(function(q){ for(var i=0;i<3;i++){ s+='<path d="M'+(q[0]-11)+' '+q[1]+' L'+(q[0]+11)+' '+q[1]+'" transform="rotate('+(i*60)+' '+q[0]+' '+q[1]+')" stroke="#7CD4FF" stroke-width="3" stroke-linecap="round"/>'; } }); return s; }},
+ {lv:58,slot:'halo',name:'Golden Halo',price:100,d:function(){ return '<ellipse cx="130" cy="40" rx="46" ry="11" fill="none" stroke="#F2C94C" stroke-width="8"/><ellipse cx="130" cy="40" rx="46" ry="11" fill="none" stroke="#FFF3C9" stroke-width="2"/>'; }},
+ {lv:59,slot:'halo',name:'Rainbow Ring',price:100,d:function(){ return RAINBOW.map(function(c,i){ var a0=-Math.PI/2+i*Math.PI/3, a1=a0+Math.PI/3; return '<path d="M'+(130+Math.cos(a0)*46).toFixed(1)+' '+(40+Math.sin(a0)*11).toFixed(1)+' A46 11 0 0 1 '+(130+Math.cos(a1)*46).toFixed(1)+' '+(40+Math.sin(a1)*11).toFixed(1)+'" fill="none" stroke="'+c+'" stroke-width="8" stroke-linecap="round"/>'; }).join(''); }},
+ {lv:60,slot:'feet',name:'Sneakers',price:60,d:function(){ return accShoe(100,'#fff','#E8476B')+accShoe(160,'#fff','#E8476B')+'<path d="M86 244 L112 244 M146 244 L172 244" stroke="#3B66E6" stroke-width="3"/>'; }},
+ {lv:61,slot:'feet',name:'Rain Boots',price:60,d:function(){ function b(x){ return '<rect x="'+(x-16)+'" y="214" width="32" height="40" rx="6" fill="#FFD23F"/><rect x="'+(x-22)+'" y="246" width="48" height="10" rx="5" fill="#2D2A1F"/>'; } return b(102)+b(158); }},
+ {lv:62,slot:'feet',name:'Roller Skates',price:80,d:function(){ function sk(x){ return accShoe(x,'#FF7EB6','#E0338A')+svgDot(x-12,262,6,'#7B4BD6','#4A2C3A')+svgDot(x+12,262,6,'#7B4BD6','#4A2C3A'); } return sk(100)+sk(160); }},
+ {lv:63,slot:'feet',name:'Bunny Slippers',price:60,d:function(){ function sl(x){ return '<ellipse cx="'+x+'" cy="248" rx="26" ry="13" fill="#FFD6EA"/><ellipse cx="'+(x-8)+'" cy="232" rx="5" ry="12" fill="#FFD6EA"/><ellipse cx="'+(x+8)+'" cy="232" rx="5" ry="12" fill="#FFD6EA"/>'+svgDot(x-7,246,2,'#4A2C3A')+svgDot(x+7,246,2,'#4A2C3A')+svgDot(x,250,2.5,'#FF7EB6'); } return sl(100)+sl(160); }},
+ {lv:64,slot:'face',name:'Mustache',price:30,d:function(){ return '<path d="M130 138 q-10 -10 -26 -2 q8 12 26 4 q18 8 26 -4 q-16 -8 -26 2 Z" fill="#4A2C3A"/>'; }},
+ {lv:65,slot:'face',name:'Freckles',price:30,d:function(){ return [[80,134],[90,140],[100,134],[160,134],[170,140],[180,134]].map(function(q){ return svgDot(q[0],q[1],2.2,'#B5541A'); }).join(''); }},
+ {lv:66,slot:'face',name:'Star Face Paint',price:30,d:function(){ return svgStar(84,134,9,4,'#FF7EB6')+svgDot(178,136,5,'#7CD4FF'); }}
+];
+SHARED_ACC.forEach(function(a){ (SLOTS[a.slot]=SLOTS[a.slot]||[]).push(a.lv); });
 function extraPieces(p,ch){
   function piece(lv,slot,cls,inner){ return '<g class="acc '+cls+'" data-lv="'+lv+'" data-slot="'+slot+'">'+inner+'</g>'; }
   function mini(id,x){ var d=DRAW[id](K_INK); return '<g transform="translate('+x+' 190) scale(.27)">'+d.back+d.main+'</g>'; }
@@ -2142,6 +2193,7 @@ function extraPieces(p,ch){
    +piece(18,'glitter','fx-glitter',[[100,196],[160,206],[124,230],[146,178],[88,222],[172,232]].map(function(q,j){ return svgSpark(q[0],q[1],4,'#fff',j*0.3); }).join(''))
    +piece(19,'medal','fx-medal','<path d="M120 198 L114 222 M140 198 L146 222" stroke="#3A7BD5" stroke-width="7"/>'+svgDot(130,232,13,'#F2C94C','#D9A72E')+svgStar(130,232,8,3.5,'#FFF6DC'))
    +piece(20,'trophy','fx-trophy','<circle cx="232" cy="46" r="34" fill="#FFF3A0" opacity=".45"/><path d="M216 26 L248 26 L246 52 Q232 66 218 52 Z" fill="#F2C94C" stroke="#D9A72E" stroke-width="2"/><path d="M216 32 Q204 34 208 44 Q212 50 219 49 M248 32 Q260 34 256 44 Q252 50 245 49" stroke="#D9A72E" stroke-width="3" fill="none"/><rect x="228" y="60" width="8" height="10" fill="#D9A72E"/><rect x="220" y="70" width="24" height="7" rx="2" fill="#8A5E33"/>'+svgStar(232,40,6,2.6,'#fff'));
+  SHARED_ACC.forEach(function(a){ var g=piece(a.lv,a.slot,'fx-acc',a.d(p)); if(a.back) behind+=g; else front+=g; });
   return {behind:behind, front:front};
 }
 /* ocean outfits, tagged with the level that unlocks them and the slot they fill */
@@ -2418,7 +2470,8 @@ var Say=(function(){
   var UA=navigator.userAgent||'', ANDROID=/Android/i.test(UA);
   var base=null, segF=[], segI=[], beamF=null, beamAll=null, shownSolid=0;
   var NAMES={}, BEAM=24;
-  ('a:a ay|b:b be bee|c:c cee see sea|d:d de dee|e:e ee|f:f ef eff|g:g ge gee|h:h aitch|i:i eye aye|j:j jay|k:k kay|l:l el ell elle|m:m em|n:n en|o:o oh owe|p:p pe pee pea|q:q cue queue kew que|r:r ar are|s:s es ess|t:t te tee tea|u:u you yu ewe|v:v ve vee|w:w|x:x ex|y:y why wye|z:z ze zee zed')
+  /* letter names, plus the words recognizers turn a lone letter into (a kid saying D is heard as 'the' or 'do' far more often than 'dee') */
+  ('a:a ay eh hey|b:b be bee bea|c:c cee see sea si|d:d de dee di the thee do dew|e:e ee he|f:f ef eff if|g:g ge gee ji|h:h aitch age|i:i eye aye|j:j jay|k:k kay okay|l:l el ell elle|m:m em am|n:n en in an and end|o:o oh owe|p:p pe pee pea|q:q cue queue kew que|r:r ar are our|s:s es ess yes|t:t te tee tea to too two|u:u you yu ewe|v:v ve vee we|w:w|x:x ex|y:y why wye|z:z ze zee zed')
     .split('|').forEach(function(g){ var p=g.split(':'); p[1].split(' ').forEach(function(n){ NAMES[n]=p[0]; }); });
   function supported(){ return !!(window.SpeechRecognition||window.webkitSpeechRecognition); }
   function lc(s){ return String(s||'').toLowerCase(); }
@@ -2451,10 +2504,20 @@ var Say=(function(){
         NB=NB.concat(cur); });
       if(NB.length) B=prune(NB); });
     return {beam:B,word:word}; }
-  function best(B,tg,full){ var b=null, bs=Infinity; (B||[]).forEach(function(s){ var sc=full?s.row[tg.length]:pscore(s); if(sc<bs){ bs=sc; b=s; } }); return b?b.L:[]; }
+  function best(B,tg,full){ var b=null, bs=Infinity; (B||[]).forEach(function(s){ var sc=full?s.row[tg.length]:pscore(s); if(sc<bs){ bs=sc; b=s; } }); return squash(b?b.L:[],tg); }
+  /* a doubled letter is kept only where the real word doubles it (the nn in pennies, the oo in bamboo); recognizers often hear one letter twice */
+  function squash(L,tg){ var cap={}, i, run=0, out=[]; for(i=0;i<tg.length;i++){ run=(i&&tg[i]===tg[i-1])?run+1:1; if(!cap[tg[i]]||cap[tg[i]]<run) cap[tg[i]]=run; }
+    for(i=0;i<L.length;i++){ run=(i&&L[i]===L[i-1])?run+1:1; if(run<=(cap[L[i]]||1)) out.push(L[i]); } return out; }
   function parse(text,tg){ tg=lc(tg); var r=run([[text]],tg,start0(tg)); return {letters:best(r.beam,tg,true),word:r.word}; }
   /* listening: letters show as they are heard; nothing is checked until the kid confirms with "Yes, check it!" */
   var ready=false, lastRes=0, qtimer=null, rtimer=null, autoMode=false, autoFailed=false, cueT=null, cueGen=0, startedAt=0;
+  /* shushed: the mic stays on while the game talks (the word, a hint, a sentence) but what it hears then is ignored, and results
+     that were already in before the shush ends are skipped, so the mic's warm-up overlaps the reading instead of following it */
+  var muted=false, skipBefore=0, lastSeen=0, muteT=null;
+  /* Chrome can recognise on the device itself (faster, and it can be told to expect letter names) when its language pack is installed */
+  var LOCAL=false; (function(){ var C=window.SpeechRecognition||window.webkitSpeechRecognition; try{ if(C&&C.available) C.available({langs:['en-US'],processLocally:true}).then(function(st){ LOCAL=(st==='available'); }).catch(function(){}); }catch(e){} })();
+  function mute(){ if(muted||!on) return; muted=true; clearTimeout(qtimer); clearTimeout(rtimer); base=beamAll||base; segF=[]; segI=[]; recompute(); render(); clearTimeout(muteT); muteT=setTimeout(unmute,12000); }
+  function unmute(){ clearTimeout(muteT); if(!muted) return; muted=false; skipBefore=lastSeen; lastRes=Date.now(); if(!ready){ var id=gen; clearTimeout(rtimer); rtimer=setTimeout(function(){ isReady(id); },1500); } render(); }
   function recompute(){ var tg=target(); if(!base) base=start0(tg); var rf=run(segF,tg,base), ri=run(segI,tg,rf.beam); beamF=rf.beam; beamAll=ri.beam; heardWord=rf.word||ri.word; }
   function clearAll(){ base=start0(target()); segF=[]; segI=[]; shownSolid=0; asked=false; recompute(); }
   function letters(){ var tg=target(); if(!beamAll) recompute(); return best(beamAll,tg,true); }
@@ -2464,8 +2527,8 @@ var Say=(function(){
     if(!A.length) h.innerHTML='<span class="hd-empty">'+(on?(ready?'Listening... say the letters one at a time.':'Getting the mic ready...'):'The letters you say will show up here.')+'</span>';
     else h.innerHTML=A.map(function(ch,i){ return '<span class="tile'+(i<n?(i>=shownSolid?' pop':''):' dim')+'">'+esc(ch)+'</span>'; }).join('');
     shownSolid=n;
-    var b=$('micBtn'); b.classList.toggle('listening',on); b.classList.toggle('warming',on&&!ready); b.setAttribute('aria-pressed',on?'true':'false');
-    $('micLabel').textContent=on?(ready?'Listening... tap when you are done':'Getting the mic ready...'):(A.length&&src==='mic'?'Tap to add more letters':'Tap, then spell it out loud');
+    var b=$('micBtn'); b.classList.toggle('listening',on); b.classList.toggle('warming',on&&!ready&&!muted); b.classList.toggle('muted',on&&muted); b.setAttribute('aria-pressed',on?'true':'false');
+    $('micLabel').textContent=on?(muted?'Shh... listening after this':(ready?'Listening... tap when you are done':'Getting the mic ready...')):(A.length&&src==='mic'?'Tap to add more letters':'Tap, then spell it out loud');
     if(G.mode==='say'){ var rv=A.length>0&&G.phase!=='done', c=$('checkBtn'); c.textContent=rv?'Yes, check it!':'Check!'; c.classList.toggle('ready',rv); } }
   function notice(msg){ var n=$('micNotice'); n.textContent=msg; n.hidden=false; }
   /* the kid looks at the letters and decides: check them, add more, or say it again */
@@ -2474,16 +2537,17 @@ var Say=(function(){
   function review(){ render(); if(G.phase==='done'||!G.cur||G.mode!=='say'||asked||!shown().length) return; asked=true; bubble('playBubble','Is that what you said? Tap "Yes, check it!" or "Say it again".'); }
   /* the mic may catch the tail of the word being read, so right after it starts a lone word is ignored; the typed box has no such tail */
   function wordOnly(msg){ if(heardWord&&!shown().length&&(src==='kb'||Date.now()-startedAt>1200)) bubble('playBubble',msg); }
-  function exact(){ var tg=target(); return !!tg&&!!beamAll&&beamAll.some(function(s){ return s.row[tg.length]===0; }); }
-  function onResult(id,e){ if(id!==gen) return; var F=[], I=[], lastF='';
-    for(var i=0;i<e.results.length;i++){ var r=e.results[i], alts=[]; for(var k=0;k<r.length&&k<5;k++) alts.push(String(r[k].transcript||''));
+  function exact(){ var tg=target(); return !!tg&&!!beamAll&&(beamAll.some(function(s){ return s.row[tg.length]===0; })||letters().join('')===tg); }
+  var seenAt=[];
+  function onResult(id,e){ if(id!==gen) return; var F=[], I=[], lastF='', lastAt=0, now=Date.now(); lastSeen=e.results.length; if(!ready){ ready=true; render(); }
+    for(var j=seenAt.length;j<e.results.length;j++) seenAt[j]=now;
+    if(muted) return;
+    for(var i=skipBefore;i<e.results.length;i++){ var r=e.results[i], alts=[]; for(var k=0;k<r.length&&k<5;k++) alts.push(String(r[k].transcript||''));
       if(!alts.length) continue;
       if(!r.isFinal){ I.push(alts); continue; }
-      /* Chrome on Android can repeat earlier results: an exact repeat with zero confidence, or one that holds everything said so far */
-      if(ANDROID){ var nt=lc(alts[0]).replace(/[^a-z0-9]+/g,' ').trim();
-        if(lastF&&F.length){ if(nt===lastF&&!(r[0].confidence>0)) continue; if(nt.length>lastF.length&&nt.indexOf(lastF)===0){ F[F.length-1]=alts; lastF=nt; continue; } }
-        lastF=nt; }
-      F.push(alts); }
+      var nt=lc(alts[0]).replace(/[^a-z0-9]+/g,' ').trim();
+      if(lastF&&F.length){ if(nt===lastF&&(!(r[0].confidence>0)||seenAt[i]-lastAt<700)) continue; if(nt.length>lastF.length&&nt.indexOf(lastF+' ')===0){ F[F.length-1]=alts; lastF=nt; lastAt=seenAt[i]; continue; } }
+      lastF=nt; lastAt=seenAt[i]; F.push(alts); }
     ready=true; segF=F; segI=I; recompute(); render(); lastRes=Date.now();
     /* the letters match the word: stop right away and ask; otherwise a short quiet spell means the kid is done */
     if(exact()) review();
@@ -2494,6 +2558,7 @@ var Say=(function(){
     if(want&&G.screen==='scr-play'&&G.phase!=='done'&&restarts<200){ restarts++; setTimeout(function(){ if(want&&!on&&id===gen) begin(); },60); }
     else { want=false; ready=false; clearTimeout(qtimer); review(); } }
   function onError(id,e){ if(id!==gen) return; var k=(e&&e.error)||'';
+    if(LOCAL&&(k==='language-not-supported'||k==='phrases-not-supported')){ LOCAL=false; return; }
     if(autoMode&&(k==='not-allowed'||k==='service-not-allowed'||k==='audio-capture')){ autoFailed=true; want=false; return; }
     if(k==='not-allowed'){ want=false; notice('The mic is blocked for this page. Allow it in the browser, or use the voice typing box below.'); }
     else if(k==='service-not-allowed'){ want=false; notice('Speech is turned off on this device. Turn on Dictation in Settings (on iPhone: General, then Keyboard) and try again.'); }
@@ -2503,7 +2568,9 @@ var Say=(function(){
   function isReady(id){ if(id===gen&&on&&!ready){ ready=true; render(); if(autoMode&&!shown().length) bubble('playBubble','Go ahead, spell it out loud!'); } }
   function begin(){ var C=window.SpeechRecognition||window.webkitSpeechRecognition; if(!C) return false;
     var id=++gen; try{ if(rec) rec.abort(); }catch(e){}
+    skipBefore=0; lastSeen=0; muted=false; seenAt=[]; clearTimeout(muteT);
     try{ rec=new C(); rec.lang='en-US'; rec.continuous=true; rec.interimResults=true; rec.maxAlternatives=5;
+      if(LOCAL){ try{ rec.processLocally=true; if(window.SpeechRecognitionPhrase) rec.phrases='ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(function(l){ return new window.SpeechRecognitionPhrase(l,3); }); }catch(e){} }
       rec.onresult=function(e){ onResult(id,e); }; rec.onend=function(){ onEnd(id); }; rec.onerror=function(e){ onError(id,e); };
       rec.onstart=function(){ isReady(id); }; rec.onaudiostart=function(){ isReady(id); };
       rec.start(); on=true; want=true; startedAt=Date.now(); }catch(e){ on=false; want=false; notice('The mic could not start. Tap it to try again, or use the voice typing box below.'); render(); return false; }
@@ -2511,21 +2578,23 @@ var Say=(function(){
     $('micNotice').hidden=true; render(); return true; }
   function start(){ if(!G.cur||G.phase==='done') return false; Voice.stop(); clearTimeout(cueT); autoMode=false; autoFailed=false; restarts=0; ready=false; lastRes=0; if(src!=='mic'){ src='mic'; clearAll(); } $('sayInput').value=''; return begin(); }
   /* stop keeps what was heard (the next tap adds more); reset wipes it */
-  function stop(){ want=false; clearTimeout(qtimer); if(on){ on=false; gen++; try{ if(rec) rec.abort(); }catch(e){} SFX.hold(350); base=beamAll||base; segF=[]; segI=[]; recompute(); } ready=false; render(); }
+  function stop(){ want=false; clearTimeout(qtimer); clearTimeout(muteT); muted=false; if(on){ on=false; gen++; try{ if(rec) rec.abort(); }catch(e){} SFX.hold(350); base=beamAll||base; segF=[]; segI=[]; recompute(); } ready=false; render(); }
   function reset(){ stop(); clearTimeout(cueT); cueGen++; src='mic'; heardWord=false; clearAll(); $('sayInput').value=''; $('micNotice').hidden=true; render(); }
   function toggle(){ if(!G.cur||G.phase==='done') return; SFX.warm();
     if(on){ stop(); if(shown().length) review(); else bubble('playBubble','Say the letters, then tap the mic again.'); }
     else if(start()) bubble('playBubble','Go ahead, spell it out loud!'); }
   /* the word is read, then the mic turns on by itself (quietly giving up on devices that refuse a start without a tap) */
   /* after the game has spoken (a hint, Hear it, Sentence, Meaning) the mic comes back on its own */
-  function resume(){ setTimeout(auto,250); }
-  function auto(){ if(G.mode!=='say'||!G.cur||G.phase==='done'||G.screen!=='scr-play'||on||autoFailed) return; autoMode=true; restarts=0; ready=false; lastRes=0; if(src!=='mic'){ src='mic'; clearAll(); } begin(); }
+  function resume(){ setTimeout(function(){ if(on) unmute(); else auto(); },150); }
+  function auto(quiet){ if(G.mode!=='say'||!G.cur||G.phase==='done'||G.screen!=='scr-play'||on||autoFailed) return; autoMode=true; restarts=0; ready=false; lastRes=0; if(src!=='mic'){ src='mic'; clearAll(); } if(begin()&&quiet) mute(); }
   /* the word is read (its recording, or the device voice), then the mic turns on once, 250 ms after the reading ends;
      the long timer is only a safety net for audio that never reports the end */
   function cue(kind){ clearTimeout(cueT); var w=G.cur, tok=++cueGen, fired=false; if(!w) return;
-    function after(){ if(tok!==cueGen||fired) return; fired=true; clearTimeout(cueT); cueT=setTimeout(auto,250); }
+    /* the mic starts right away, shushed, so it is warm by the time the word has been read */
+    if(on) mute(); else auto(true);
+    function after(){ if(tok!==cueGen||fired) return; fired=true; clearTimeout(cueT); cueT=setTimeout(function(){ if(on) unmute(); else auto(); },150); }
     var spoke=(kind==='spell')?Voice.spell(w,after):Voice.word(w,after);
-    if(spoke){ speakPulse(); cueT=setTimeout(after,(kind==='spell'?9000:5000)+w.w.length*300); } else cueT=setTimeout(auto,300); }
+    if(spoke){ speakPulse(); cueT=setTimeout(after,(kind==='spell'?9000:5000)+w.w.length*300); } else cueT=setTimeout(after,300); }
   /* "Say it again": wipe the letters and listen again the same way as before */
   function again(){ if(!G.cur||G.phase==='done') return; var kb=(src==='kb')||!supported(); SFX.tick();
     if(on&&!kb){ clearAll(); heardWord=false; render(); bubble('playBubble','Okay, spell it again!'); return; }
@@ -2541,7 +2610,7 @@ var Say=(function(){
     if(/Macintosh/i.test(UA)) return 'Click the box, press the Fn key twice (or the mic key), and say the letters.';
     return "Click the box and use your computer's voice typing to say the letters."; }
   function prepare(){ var ok=supported(); $('micBtn').hidden=!ok; $('sayHint').hidden=!ok; $('sayOrTxt').textContent=ok?"or use your device's voice typing":"Spell it out loud with your device's voice typing"; $('kbHint').textContent=kbHint(); }
-  return {supported:supported,parse:parse,letters:letters,start:start,stop:stop,reset:reset,toggle:toggle,again:again,cue:cue,auto:auto,resume:resume,render:render,fromText:fromText,prepare:prepare,
+  return {supported:supported,parse:parse,letters:letters,start:start,stop:stop,reset:reset,toggle:toggle,again:again,cue:cue,auto:auto,resume:resume,mute:mute,unmute:unmute,get muted(){return muted;},render:render,fromText:fromText,prepare:prepare,
     get on(){return on;}, get ready(){return ready;}, get heardWord(){return heardWord;}, _android:function(v){ ANDROID=!!v; }};
 })();
 
@@ -2561,6 +2630,7 @@ function storeItems(k){ var L=WORLDS[k].levels, out=[];
   for(var i=0;i<L.length;i++){ var lv=i+1, pet=!!PET_LV[lv];
     out.push({id:'o'+lv,lv:lv,kind:pet?'pet':'outfit',name:L[i].o,price:pet?PET_PRICES[lv]:COIN_PRICES[i],cur:pet?'mastery':'coins'});
     out.push({id:'d'+lv,lv:lv,kind:'decor',name:cap(L[i].l),price:Math.max(15,Math.round(COIN_PRICES[i]*0.6)),cur:'coins'}); }
+  SHARED_ACC.forEach(function(a){ out.push({id:'o'+a.lv,lv:a.lv,kind:'outfit',name:a.name,price:a.price,cur:'coins'}); });
   PET_ACC.forEach(function(a){ out.push({id:'o'+a.lv,lv:a.lv,kind:'petacc',name:a.name,price:a.price,cur:'mastery'}); });
   PET_SCENE.forEach(function(a){ out.push({id:'d'+a.lv,lv:a.lv,kind:'petscene',name:a.name,price:a.price,cur:'mastery'}); });
   return out; }
@@ -2627,11 +2697,13 @@ function itemPic(it){ if(isScene(it)) return '<div class="si-swatch" aria-hidden
   var list=[it.lv]; if(it.kind==='petacc') list.push(wearList().indexOf(17)>=0&&wearList().indexOf(12)<0?17:12);
   var html=axoSVG(), box=document.createElement('div'); box.innerHTML=html; applyWear(box,list); return box.innerHTML; }
 /* the store is laid out by where things go: items that share a spot (one hat at a time) sit together under one heading */
-var SLOT_NAMES={hat:'Hats',neck:'Necklaces',eyes:'Glasses',cape:'Capes',wand:'Wands',shoulders:'Shoulder pads',aura:'Glow',halo:'Halo'};
+var SLOT_NAMES={hat:'Hats',eyes:'Glasses',face:'Face',neck:'Necklaces',cape:'Capes',wings:'Wings',shoulders:'Shoulders',wand:'Wands',feet:'Shoes',aura:'Glow',halo:'Halo'};
+var GROUP_ORDER=['Hats','Glasses','Face','Necklaces','Capes','Wings','Shoulders','Wands','Shoes','Glow','Halo','Wear with anything'];
 function storeGroups(tab,items){ var groups=[], by={};
   function add(name,note,it){ var g=by[name]; if(!g){ g=by[name]={name:name,note:note,items:[]}; groups.push(g); } g.items.push(it); }
   if(tab==='outfit'){ items.forEach(function(it){ var sl=slotsOf(it.lv)[0], nm=SLOT_NAMES[sl]; if(nm) add(nm,'',it); else add('Wear with anything','',it); });
-    groups.forEach(function(g){ if(g.name!=='Wear with anything'&&g.items.length>1) g.note='pick one'; }); }
+    groups.forEach(function(g){ if(g.name!=='Wear with anything'&&g.items.length>1) g.note='pick one'; });
+    groups.sort(function(a,b){ return GROUP_ORDER.indexOf(a.name)-GROUP_ORDER.indexOf(b.name); }); }
   else if(tab==='pet'){ items.forEach(function(it){ add(it.kind==='pet'?'Pets':it.kind==='petacc'?'For your pet':'Pet things in the scene',it.kind==='pet'?'both can come out':it.kind==='petacc'?'needs the Tiny Buddy out':'show as many as you like',it); }); }
   else items.forEach(function(it){ add('Decorations','show as many as you like',it); });
   return groups; }
@@ -2979,7 +3051,7 @@ window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},voic
 /* redraw after the online copy changed under this page */
 function refreshView(){ migrateStore(S); $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
-var BUILD='2026-10-06.3';
+var BUILD='2026-10-07.3';
 function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
   fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
     if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }
