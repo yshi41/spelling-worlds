@@ -52,7 +52,7 @@ const PROBE = () => {
         await click('#worldBtn'); await sleep(300); await report(T(kid + ' world picker open'), w); await click('#worldCancel'); await sleep(200);
         await page.evaluate(() => { __spelling.SW().pearls = 700; __spelling.WORDS4.slice(0, 8).forEach(x => { __spelling.S.words[x.w] = { mastered: true, streak: 3, right: 3, wrong: 0, seen: 3 }; }); ['o1', 'd1', 'o12'].forEach(id => __spelling.store.act(id, 'buy')); });
         await page.$eval('.card.store', el => el.scrollIntoView({ block: 'start' })); await sleep(200);
-        for (const tab of ['outfit', 'decor', 'pet']) { await click('#storeTabs .chip[data-tab="' + tab + '"]'); await sleep(200); await report(T(kid + ' store ' + tab), w); }
+        for (const tab of ['outfit', 'decor', 'pet']) { await click('#storeTabs .chip[data-tab="' + tab + '"]'); await sleep(200); await report(T(kid + ' store ' + tab), w); await page.evaluate(() => document.querySelectorAll('#storeGrid details').forEach(d => { d.open = true; })); await sleep(200); await report(T(kid + ' store ' + tab + ' all open'), w); }
         await page.$eval('.card.settings', el => el.scrollIntoView({ block: 'start' })); await sleep(150); await click('#resetBtn'); await sleep(200); await report(T(kid + ' settings reset confirm'), w); await click('#resetNo'); await sleep(100);
       }
     }

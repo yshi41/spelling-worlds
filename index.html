@@ -460,8 +460,16 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 .store-tabs{margin-bottom:10px}
 .store-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px}
 #storeGrid{display:block}
-.store-group{margin-bottom:14px}
-.sg-title{font-size:1.05rem;margin:4px 0 8px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;color:var(--ink)}
+.store-group{border-top:2px solid var(--line)}
+.store-group:last-child{border-bottom:2px solid var(--line)}
+/* each spot opens and closes like the sections of Yan's dashboard: a triangle, the name, a count */
+.sg-title{font-family:var(--display),sans-serif;font-weight:600;font-size:1.1rem;min-height:48px;padding:6px 2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--ink);cursor:pointer;list-style:none;-webkit-tap-highlight-color:transparent;user-select:none}
+.sg-title::-webkit-details-marker{display:none}
+.sg-title::before{content:"\25B8";font-size:1rem;color:var(--ink-soft);width:1em;text-align:center}
+.store-group[open]>.sg-title::before{content:"\25BE"}
+.sg-title:focus-visible{outline:3px solid var(--sky);outline-offset:2px;border-radius:10px}
+.store-group[open]>.store-grid{padding-bottom:14px}
+.sg-count{font-family:inherit;font-size:.78rem;font-weight:700;color:var(--ink-soft);border:2px solid var(--line);border-radius:999px;padding:1px 9px}
 .sg-note{font-size:.75rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft);background:var(--surface-2);border:2px solid var(--line);border-radius:999px;padding:2px 8px}
 .shop-item{border:2px solid var(--line);background:var(--surface-2);border-radius:16px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
 .shop-item svg{width:78px;height:70px;overflow:visible}
@@ -2682,6 +2690,8 @@ function migrateStore2(st){ if((st.storeV||0)>=2) return st; st.storeV=2; var ch
   return st; }
 /* the store card on the home screen */
 var STORE_TAB='outfit', PEEK=null, peekT=null;
+/* which store sections are open, by tab and heading; kept only while the game is open (nothing is stored in the browser) */
+var STORE_OPEN={};
 function applyWear(root,list){ var els=root.querySelectorAll('.acc'); for(var i=0;i<els.length;i++){ var lv=parseInt(els[i].getAttribute('data-lv'),10); els[i].classList.toggle('on',list.indexOf(lv)>=0); } }
 function setOutfit(){ var w=wearList(), a=document.querySelectorAll('.axo-box .axo'); for(var i=0;i<a.length;i++) applyWear(a[i],w); }
 function renderScene(){ var on=decorRec().on, els=$('scene').querySelectorAll('[data-lv]');
@@ -2712,7 +2722,11 @@ function renderStore(){ var tab=STORE_TAB, items=storeItems(world()).filter(func
   var tabs=document.querySelectorAll('#storeTabs .chip'); for(var i=0;i<tabs.length;i++) tabs[i].classList.toggle('on',tabs[i].getAttribute('data-tab')===tab);
   function card(it){ var own=owns(it), on=own&&showing(it);
     return '<div class="shop-item'+(own?' owned':'')+(on?' on':'')+' k-'+it.kind+'" data-id="'+it.id+'">'+itemPic(it)+'<div class="si-name">'+esc(it.name)+'</div><div class="si-price">'+(own?(on?(isScene(it)?'Showing':'Wearing'):'Yours'):priceText(it))+'</div>'+itemButton(it)+(isScene(it)&&!own?'<button type="button" class="btn btn-ghost btn-sm si-peek" data-act="peek">Peek</button>':'')+'</div>'; }
-  $('storeGrid').innerHTML=storeGroups(tab,items).map(function(g){ return '<div class="store-group" data-group="'+esc(g.name)+'"><h4 class="sg-title">'+esc(g.name)+(g.note?' <span class="sg-note">'+esc(g.note)+'</span>':'')+'</h4><div class="store-grid">'+g.items.map(card).join('')+'</div></div>'; }).join('');
+  var gs=storeGroups(tab,items);
+  /* every section starts closed, except a tab that has only one, which starts open */
+  function isOpen(g){ var k=tab+':'+g.name; return k in STORE_OPEN?STORE_OPEN[k]:gs.length===1; }
+  $('storeGrid').innerHTML=gs.map(function(g){ var n=g.items.length, mine=g.items.filter(owns).length;
+    return '<details class="store-group" data-group="'+esc(g.name)+'"'+(isOpen(g)?' open':'')+'><summary class="sg-title"><span class="sg-name">'+esc(g.name)+'</span><span class="sg-count">'+n+' item'+(n===1?'':'s')+(mine?' &middot; '+mine+' yours':'')+'</span>'+(g.note?'<span class="sg-note">'+esc(g.note)+'</span>':'')+'</summary><div class="store-grid">'+g.items.map(card).join('')+'</div></details>'; }).join('');
   $('storeHint').textContent='Spend your '+W().cur+' on outfits and things '+W().where+'. Pets and pet things cost mastery points: one for every word you master.'; }
 function storeAct(id,act){ var it=storeItem(id); if(!it) return; SFX.warm();
   if(act==='peek'){ peek(it.lv); SFX.tick(); return; }
@@ -3013,6 +3027,7 @@ $('syncRetry').addEventListener('click',function(){ Net.retry(); });
 $('resetYes').addEventListener('click',function(){ var keep={kid:S.kid,charLagoon:S.charLagoon,charCandy:S.charCandy,charCanopy:S.charCanopy,charOcean:S.charOcean,charBows:S.charBows,charBoba:S.charBoba,charBirds:S.charBirds,charCheer:S.charCheer,look:S.look,grade:S.grade,gradePicked:S.gradePicked,roundLen:S.roundLen,sound:S.sound,restoredId:S.restoredId,theme:S.theme,chars:{},epoch:(S.epoch||0)+1}; S=Object.assign(defaults(),keep); save(); $('resetConfirm').hidden=true; applyWorld(); renderHome(); toast('Progress erased. Fresh start!'); });
 $('roundLen').addEventListener('change',function(){ S.roundLen=$('roundLen').value; save(); });
 $('storeGrid').addEventListener('click',function(e){ var b=e.target.closest('[data-act]'); if(!b||b.disabled) return; var it=b.closest('.shop-item'); if(it) storeAct(it.getAttribute('data-id'),b.getAttribute('data-act')); });
+$('storeGrid').addEventListener('toggle',function(e){ var d=e.target; if(!d.classList||!d.classList.contains('store-group')) return; STORE_OPEN[STORE_TAB+':'+d.getAttribute('data-group')]=d.open; },true);
 $('storeTabs').addEventListener('click',function(e){ var c=e.target.closest('.chip'); if(!c) return; STORE_TAB=c.getAttribute('data-tab'); renderStore(); SFX.warm(); SFX.tick(); });
 $('soundBtn').addEventListener('click',function(){ S.sound=!S.sound; save(); renderSound(); if(S.sound){ SFX.warm(); SFX.pop(); } });
 $('spellForm').addEventListener('submit',function(e){ e.preventDefault(); check(); });
