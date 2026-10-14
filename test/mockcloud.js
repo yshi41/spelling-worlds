@@ -4,7 +4,7 @@ const MOCK = 'https://cloud.test';
 const REAL = /spelling-worlds-saves\.[a-z0-9-]+\.workers\.dev/;
 const KIDS = ['charlie', 'riley', 'vera', 'cora', 'addie', 'amy', 'hallie'];
 const clone = o => JSON.parse(JSON.stringify(o));
-const { mergeState, lowersProgress } = require('../worker/src/logic.mjs');
+const { mergeState, lowersProgress, keepRefunds } = require('../worker/src/logic.mjs');
 function create() {
   const store = {}, history = [], stats = { gets: 0, posts: 0, conflicts: 0, merges: 0, realHits: 0 }, ctl = { down: false, dropNextReply: false, dropReplies: 0, delayMs: 0 };
   const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS', 'Access-Control-Allow-Headers': 'Content-Type' };
@@ -32,6 +32,7 @@ function create() {
       if (!from) return conflict();
       state = mergeState(state, clone(cur.state), from); merged = true; stats.merges++;
     }
+    if (keepRefunds(state, cur.state)) merged = true;
     if (lowersProgress(state, cur.state)) return conflict();
     store[id] = { rev: cur.rev + 1, state: clone(state) }; history.push({ id, rev: cur.rev + 1, sid: state._sid, state: clone(state) });
     if (ctl.dropNextReply) { ctl.dropNextReply = false; return req.abort('connectionreset'); }

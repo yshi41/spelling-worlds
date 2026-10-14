@@ -21,13 +21,14 @@ const union = (a, b) => Array.from(new Set((a || []).concat(b || [])));
 export function mergeStore(out, mem, disk, base) {
   out.storeV = Math.max(mem.storeV || 0, disk.storeV || 0);
   out.mspent = grow(mem.mspent, disk.mspent, base.mspent);
+  out.mrefund = Math.max(mem.mrefund || 0, disk.mrefund || 0);
   out.pets = { own: union(mem.pets && mem.pets.own, disk.pets && disk.pets.own) };
   out.decor = {};
   const md = mem.decor || {}, dd = disk.decor || {};
   new Set(Object.keys(md).concat(Object.keys(dd))).forEach(k => { const m = md[k], d = dd[k] || {}; out.decor[k] = { own: union(m && m.own, d.own), on: (m && m.on) ? m.on : (d.on || []) }; });
   return out;
 }
-const charExtras = (m, d, b) => ({ spent: grow(m.spent, d.spent, b.spent), own: union(m.own, d.own), wear: m.wear ? m.wear : (d.wear || []), pets: union(m.pets, d.pets), decor: { own: union(m.decor && m.decor.own, d.decor && d.decor.own), on: (m.decor && m.decor.on) ? m.decor.on : ((d.decor && d.decor.on) || []) } });
+const charExtras = (m, d, b) => ({ spent: grow(m.spent, d.spent, b.spent), refund: Math.max(m.refund || 0, d.refund || 0), own: union(m.own, d.own), wear: m.wear ? m.wear : (d.wear || []), pets: union(m.pets, d.pets), decor: { own: union(m.decor && m.decor.own, d.decor && d.decor.own), on: (m.decor && m.decor.on) ? m.decor.on : ((d.decor && d.decor.on) || []) } });
 export function mergeState(mem, disk, base) {
   const me = mem.epoch || 0, de = disk.epoch || 0, be = base.epoch || 0;
   if (me !== be) return mem;
@@ -60,6 +61,15 @@ export function mergeState(mem, disk, base) {
 }
 
 /* rewards may only go down through a Reset, which bumps the epoch */
+/* (2026-10-14) refunds only ever grow: copy any higher refund the service already holds onto the incoming save; true if it changed */
+export function keepRefunds(next, prev) {
+  if (!prev) return false;
+  let changed = false;
+  if ((prev.mrefund || 0) > (next.mrefund || 0)) { next.mrefund = prev.mrefund; changed = true; }
+  const pc = prev.chars || {}, nc = next.chars || (next.chars = {});
+  Object.keys(pc).forEach(k => { const r = (pc[k] && pc[k].refund) || 0; if (r > ((nc[k] && nc[k].refund) || 0)) { if (!nc[k]) nc[k] = Object.assign({}, pc[k]); else nc[k].refund = r; changed = true; } });
+  return changed;
+}
 export function lowersProgress(next, prev) {
   if (!prev) return false;
   const ne = next.epoch || 0, pe = prev.epoch || 0;
