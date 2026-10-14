@@ -191,7 +191,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.click('.mode-btn[data-mode="tiles"]'); await sleep(700);
   t = await T(); ok(await visible('#tileArea') && await count('#tiles .tile.pick') === t.word.length, 'tiles laid out for: ' + t.word);
   const p0 = t.pearls;
-  for (const ch of t.word) { const h = await page.evaluateHandle(ch => Array.from(document.querySelectorAll('#tiles .tile.pick:not(.used)')).find(b => b.textContent === ch), ch); await h.asElement().click(); await sleep(90); }
+  for (const ch of t.word) { const h = await page.evaluateHandle(ch => Array.from(document.querySelectorAll('#tiles .tile.pick:not(.used)')).find(b => b.textContent === ch.toLowerCase()), ch); await h.asElement().click(); await sleep(90); }
   await sleep(800); t = await T();
   ok(t.phase === 'done' && t.pearls === p0 + 10, 'tiles answer accepted (+10)');
   await page.click('#quitBtn'); await sleep(300);
@@ -778,6 +778,33 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     ok(JSON.stringify(c.decor.own.slice().sort()) === JSON.stringify([1, 2]) && JSON.stringify(c.decor.on) === JSON.stringify([1]) && JSON.stringify(m.chars['candy:bear'].decor.own) === JSON.stringify([3]), 'decorations bought on either device are kept, each character merged on its own');
     ok(!L.lowersProgress(mem, base), 'spending coins is never mistaken for lost progress');
     ok(await page.evaluate((mem, disk, base) => { const m = __spelling.mergeState ? __spelling.mergeState(mem, disk, base) : null; return !m || (m.chars['lagoon:axolotl'].spent === 60 && m.mspent === 10 && m.chars['lagoon:axolotl'].pets.length === 2); }, mem, disk, base), 'the page merges purchases the same way the service does');
+  }
+
+  console.log('12o. Spell It on a touch screen: the game has its own keyboard, so the device keyboard never suggests the word');
+  {
+    await pickPlayer('riley'); await away();
+    ok(await page.evaluate(() => { __spelling.kb.force(false); return document.getElementById('kb').hidden && !document.getElementById('spellInput').hasAttribute('inputmode'); }), 'with a mouse the letter keys stay out of the way and the box is an ordinary input');
+    await page.evaluate(() => { __spelling.kb.force(true); const w = __spelling.WORDS4.find(x => x.w === 'kelp'); __spelling.startRound('spell', [w]); }); await sleep(500);
+    const press = k => page.evaluate(k => { const b = document.querySelector('#kb .kb-key[data-k="' + k + '"]'); b.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerType: 'touch' })); b.dispatchEvent(new PointerEvent('pointerup', { bubbles: true, cancelable: true, pointerType: 'touch' })); }, k);
+    ok(await page.evaluate(() => !document.getElementById('kb').hidden && document.querySelectorAll('#kb .kb-key').length === 27 && document.getElementById('spellInput').getAttribute('inputmode') === 'none' && document.getElementById('spellInput').placeholder === 'tap the letters'), 'on a touch screen the box shows 26 letter keys and a delete key, and tells the device to keep its keyboard closed');
+    ok(await page.evaluate(() => Array.from(document.querySelectorAll('#kb .kb-row')).map(r => Array.from(r.querySelectorAll('.kb-key')).map(b => b.getAttribute('data-k')).join('')).join('|') === 'qwertyuiop|asdfghjkl|zxcvbnmbs'), 'the keys sit in the phone keyboard order, delete at the end');
+    for (const k of ['k', 'e', 'l', 'l']) await press(k);
+    ok(await page.$eval('#spellInput', e => e.value) === 'kell', 'tapping keys types into the box');
+    await press('bs'); await press('p');
+    ok(await page.$eval('#spellInput', e => e.value) === 'kelp', 'the delete key takes the last letter back');
+    await page.evaluate(() => document.getElementById('checkBtn').click()); await sleep(400);
+    ok((await T()).phase === 'done' && await page.evaluate(() => getComputedStyle(document.getElementById('kb')).pointerEvents === 'none'), 'Check accepts the word typed on the keys, and they go quiet until the next word');
+    await press('x');
+    ok(await page.$eval('#spellInput', e => e.value) === 'kelp', 'a tap between words changes nothing');
+    await page.evaluate(() => document.getElementById('quitBtn').click()); await sleep(300);
+    await page.evaluate(() => { const w = __spelling.WORDS4.find(x => x.w === 'kelp'); __spelling.startRound('spell', [w]); }); await sleep(500);
+    for (const k of ['k', 'e', 'l', 'f']) await press(k);
+    await page.evaluate(() => document.getElementById('checkBtn').click()); await sleep(700);
+    ok((await T()).phase === 'lockin' && await page.evaluate(() => getComputedStyle(document.getElementById('kb')).pointerEvents !== 'none' && document.getElementById('spellInput').placeholder === 'kelp'), 'after a miss the keys stay live for the lock-in retype');
+    for (const k of ['k', 'e', 'l', 'p']) await press(k);
+    await page.evaluate(() => document.getElementById('checkBtn').click()); await sleep(400);
+    ok((await T()).phase === 'done', 'and the retype on the keys locks it in');
+    await page.evaluate(() => { document.getElementById('quitBtn').click(); __spelling.kb.force(null); }); await sleep(300);
   }
 
   console.log('12k. Say It: spell the word out loud, then confirm (fake microphone)');

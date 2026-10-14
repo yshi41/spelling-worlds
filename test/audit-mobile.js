@@ -1,6 +1,7 @@
 /* Mobile audit: every screen and state at phone sizes (plus landscape and tablet), against the stand-in save service.
    Flags: sideways overflow, boxes past the edge, tap targets under 36px, clipped single-line text, text under 12px,
    inputs under 16px (iOS zooms on focus), and the Check button out of reach on the play screen.
+   Letter keys of the game's own Spell It keyboard (.kb-key) may be as narrow as a phone's own keys (22px), but never shorter than 36px.
      node audit-mobile.js ../index.html [--shots]                                                        */
 const puppeteer = require('puppeteer-core'); const path = require('path');
 const URL = 'file:///' + path.resolve(process.argv[2] || '../index.html').split(path.sep).join('/');
@@ -17,7 +18,7 @@ const PROBE = () => {
   const skip = el => el.closest('svg') || el.closest('.scene, .bubbles, #confetti, .banner, .toast, .float-txt, .pearl-fly, .burst, canvas');
   const scrolls = el => { for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) { const o = getComputedStyle(p).overflowX; if (o === 'auto' || o === 'scroll') return true; } return false; };
   document.querySelectorAll('#app *').forEach(el => { if (skip(el) || !vis(el) || scrolls(el)) return; const r = el.getBoundingClientRect(); if (r.right > iw + 1 || r.left < -1) out.wide.push(name(el) + ' ' + Math.round(r.left) + '..' + Math.round(r.right)); });
-  document.querySelectorAll('#app button, #app a[href], #app input, #app select, #app .chip, #app .char-chip, #app .world-chip, #app .profile-card, #app .tile.pick, #app .tile.slot, #app .word-row').forEach(el => { if (skip(el) || !vis(el)) return; const r = el.getBoundingClientRect(); if (r.height < 36 || r.width < 36) out.small.push(name(el) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height)); });
+  document.querySelectorAll('#app button, #app a[href], #app input, #app select, #app .chip, #app .char-chip, #app .world-chip, #app .profile-card, #app .tile.pick, #app .tile.slot, #app .word-row').forEach(el => { if (skip(el) || !vis(el)) return; const r = el.getBoundingClientRect(); if (r.height < 36 || r.width < (el.classList.contains('kb-key') ? 22 : 36)) out.small.push(name(el) + ' ' + Math.round(r.width) + 'x' + Math.round(r.height)); });
   document.querySelectorAll('#app *').forEach(el => { if (skip(el) || !vis(el)) return; const cs = getComputedStyle(el); if ((cs.whiteSpace === 'nowrap' || cs.textOverflow === 'ellipsis') && el.scrollWidth > el.clientWidth + 1 && el.textContent.trim()) out.clipped.push(name(el) + ' "' + el.textContent.trim().slice(0, 24) + '"'); });
   document.querySelectorAll('#app *').forEach(el => { if (skip(el) || !vis(el)) return; const t = Array.from(el.childNodes).some(n => n.nodeType === 3 && n.textContent.trim()); if (!t) return; const fs = parseFloat(getComputedStyle(el).fontSize); if (fs < 12) out.tiny.push(name(el) + ' ' + fs.toFixed(1) + 'px'); });
   document.querySelectorAll('#app input, #app select, #app textarea').forEach(el => { if (!vis(el)) return; const fs = parseFloat(getComputedStyle(el).fontSize); if (fs < 16) out.zoom.push(name(el) + ' ' + fs.toFixed(1) + 'px'); });

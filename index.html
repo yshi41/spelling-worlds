@@ -571,6 +571,19 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 .lockin .lock-label{font-weight:800;font-size:.9rem;letter-spacing:.06em;text-transform:uppercase}
 .lockin .lock-word{font-family:var(--display),sans-serif;font-size:clamp(1.6rem,6vw,2.4rem);font-weight:700;letter-spacing:.18em;margin-top:4px}
 .action-row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+/* (2026-10-13) on phones and tablets Spell It uses the game's own keyboard: the device keyboard kept suggesting the word.
+   Keys are laid out like the phone's, so nothing new to learn; they sit as wide as the phone's own keys on a small screen */
+.kb{display:flex;flex-direction:column;gap:6px;margin-top:10px;scroll-margin-bottom:76px;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.kb-row{display:flex;gap:4px;justify-content:center}
+.kb-row:nth-child(2){padding:0 4%}
+.kb-key{flex:1 1 0;min-width:0;max-width:54px;height:clamp(44px,11vw,56px);padding:0;border-radius:10px;border:2px solid var(--line);border-bottom-width:4px;background:var(--surface-2);color:var(--ink);font-family:var(--display),sans-serif;font-weight:600;font-size:clamp(1.15rem,4.8vw,1.6rem);line-height:1;display:inline-grid;place-items:center;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.kb-key:active{transform:translateY(2px);border-bottom-width:2px;background:var(--sky-soft)}
+.kb-bs{flex:1.7 1 0;max-width:92px;color:var(--ink-soft)}
+.kb-bs svg{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.spell-input[readonly]~.kb{opacity:.45;pointer-events:none}
+@media (hover:hover){.kb-key:hover{background:var(--surface)}}
+@media (max-width:360px){.kb-row{gap:3px}.kb-row:nth-child(2){padding:0 2%}.kb{margin-inline:-6px}}
+@media (max-height:500px){.kb{gap:4px;margin-top:6px}.kb-key{height:40px;font-size:1.1rem}}
 .notice{background:var(--bad-soft);border-radius:14px;padding:10px 14px;font-weight:700;font-size:.95rem}
 /* say it: the kid spells out loud; the letters the mic hears show up as tiles, unfinished ones faded */
 .say-area{display:flex;flex-direction:column;gap:10px;align-items:center}
@@ -1011,6 +1024,7 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
         <div class="lockin" id="lockinBox" hidden></div>
         <form id="spellForm" autocomplete="off">
           <input class="spell-input" id="spellInput" type="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" enterkeyhint="go" placeholder="type the word" aria-label="Type the word">
+          <div class="kb" id="kb" role="group" aria-label="Letter keys" hidden></div>
         </form>
         <div id="tileArea" hidden>
           <div class="tile-row slots" id="slots"></div>
@@ -2818,9 +2832,10 @@ function nextWord(){
   $('checkBtn').disabled=false; $('hintBtn').disabled=false;
   bubble('playBubble', item.retry?"Let's get this one!":pick(W().listen));
   setMood('neutral');
-  var inp=$('spellInput'); inp.value=''; inp.readOnly=false; inp.placeholder='type the word'; inp.className='spell-input';
+  var inp=$('spellInput'); inp.value=''; inp.readOnly=false; inp.placeholder=KB.hint(); inp.className='spell-input';
   if(G.mode==='say'){ Say.reset(); if(isPhone()) setTimeout(function(){ try{ $('micBtn').scrollIntoView({block:'center'}); }catch(e){} },60); }
-  else if(G.mode==='tiles'){ setupTiles(G.cur.w); if(isPhone()) setTimeout(function(){ try{ $('checkBtn').scrollIntoView({block:'end'}); }catch(e){} },60); } else { refocus(); if(isPhone()) setTimeout(function(){ try{ $('spellInput').scrollIntoView({block:'center'}); }catch(e){} },60); }
+  else if(G.mode==='tiles'){ setupTiles(G.cur.w); if(isPhone()) setTimeout(function(){ try{ $('checkBtn').scrollIntoView({block:'end'}); }catch(e){} },60); }
+  else { refocus(); if(isPhone()) setTimeout(function(){ try{ if(KB.want()) $('kb').scrollIntoView({block:'end'}); else $('spellInput').scrollIntoView({block:'center'}); }catch(e){} },60); }
   if(!Voice.ok){ showInfo('<b>Meaning:</b> '+esc(G.cur.d)); }
   G.vtimer=setTimeout(function(){ if(G.cur&&G.screen==='scr-play'){ if(G.mode==='say') Say.cue('word'); else { Voice.full(G.cur); speakPulse(); } } },450);
 }
@@ -2945,6 +2960,29 @@ function endRound(){
 }
 /* phones: keep the app inside the visible area when the keyboard is open, and keep feedback in view */
 function isPhone(){ return window.innerWidth<=720||window.innerHeight<=500; }
+/* (2026-10-13) the game's own keyboard for Spell It on touch screens. The device keyboard offers the word it sees you
+   typing, which gives the spelling away, so on a phone or tablet the input never opens it (inputmode none) and the
+   letters come from these keys instead. A real keyboard still types into the box. */
+var KB=(function(){ var ROWS=['qwertyuiop','asdfghjkl','zxcvbnm'], force=null, holdT=null, holdI=null;
+  function want(){ if(force!==null) return force; return (window.matchMedia&&matchMedia('(hover:none) and (pointer:coarse)').matches)||(navigator.maxTouchPoints>0&&window.innerWidth<=1024); }
+  function build(){ var el=$('kb'); if(el.firstChild) return;
+    el.innerHTML=ROWS.map(function(r,i){ return '<div class="kb-row">'+r.split('').map(function(c){ return '<button type="button" class="kb-key" data-k="'+c+'">'+c+'</button>'; }).join('')+(i===2?'<button type="button" class="kb-key kb-bs" data-k="bs" aria-label="Delete a letter"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5h11a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H9l-6-7z"/><path d="M12 9l6 6M18 9l-6 6"/></svg></button>':'')+'</div>'; }).join(''); }
+  function live(){ var inp=$('spellInput'); return G.mode==='spell'&&G.phase!=='done'&&!inp.readOnly&&!inp.disabled&&!$('spellForm').hidden; }
+  function tap(k){ if(!live()) return false; var inp=$('spellInput');
+    if(k==='bs'){ if(!inp.value) return false; inp.value=inp.value.slice(0,-1); } else inp.value+=k;
+    inp.dispatchEvent(new Event('input',{bubbles:true})); try{ inp.focus({preventScroll:true}); }catch(e){} return true; }
+  function stopHold(){ clearTimeout(holdT); clearInterval(holdI); holdT=holdI=null; }
+  function apply(){ var on=want(), inp=$('spellInput'); if(on) build(); $('kb').hidden=!on;
+    if(on) inp.setAttribute('inputmode','none'); else inp.removeAttribute('inputmode');
+    if(G.mode==='spell'&&G.phase!=='done'&&!inp.readOnly&&inp.placeholder!==(G.cur&&G.cur.w)) inp.placeholder=hint(); }
+  function hint(){ return want()?'tap the letters':'type the word'; }
+  function init(){ var el=$('kb');
+    el.addEventListener('pointerdown',function(e){ var b=e.target.closest('.kb-key'); if(!b) return; e.preventDefault(); var k=b.getAttribute("data-k"); if(tap(k)){ SFX.warm(); SFX.tick(); }
+      if(k==='bs'){ stopHold(); holdT=setTimeout(function(){ holdI=setInterval(function(){ if(!tap('bs')) stopHold(); },70); },420); } });
+    ['pointerup','pointercancel','pointerleave'].forEach(function(t){ el.addEventListener(t,stopHold); });
+    el.addEventListener('click',function(e){ e.preventDefault(); });
+    window.addEventListener('resize',apply); apply(); }
+  return {init:init,apply:apply,want:want,hint:hint,tap:tap,force:function(v){ force=v; apply(); }}; })();
 function revealFeedback(){ if(!isPhone()) return; setTimeout(function(){ try{ $('resultBox').scrollIntoView({block:'start',behavior:'smooth'}); }catch(e){} },80); }
 (function(){ var vv=window.visualViewport; if(!vv) return; var app=$('app'), t=null;
   function fit(){ var h=Math.round(vv.height); document.documentElement.style.setProperty('--vvh',h+'px'); document.documentElement.style.setProperty('--vvtop',Math.round(vv.offsetTop)+'px'); app.style.transform=vv.offsetTop>1?'translateY('+Math.round(vv.offsetTop)+'px)':'';
@@ -3112,16 +3150,16 @@ if(HOVER){
   s.style.cssText='left:'+(Math.random()*100)+'%;width:'+size+'px;height:'+size+'px;--c:'+cols[i%5]+';animation-duration:'+(10+Math.random()*13)+'s;animation-delay:'+(-Math.random()*22)+'s;'; b.appendChild(s); } })();
 
 /* small handle for automated tests */
-window.__spelling={get G(){return G;},get S(){return S;},get P(){return P;},voice:Voice,world:world,save:save,startRound:startRound,levelFor:levelFor,SW:SW,charKey:charKey,migrateChars:migrateChars,WORDS3:WORDS3,WORDS4:WORDS4,net:Net,selectProfile:selectProfile,say:Say,mergeState:mergeState,SLOTS:SLOTS,store:{items:storeItems,item:storeItem,buy:buy,wear:wear,place:place,owns:owns,showing:showing,coins:coins,mastery:masteryPts,migrate:migrateStore,act:storeAct,render:renderStore},get ONLINE(){return ONLINE;},get LIVE(){return LIVE;}};
+window.__spelling={kb:KB,get G(){return G;},get S(){return S;},get P(){return P;},voice:Voice,world:world,save:save,startRound:startRound,levelFor:levelFor,SW:SW,charKey:charKey,migrateChars:migrateChars,WORDS3:WORDS3,WORDS4:WORDS4,net:Net,selectProfile:selectProfile,say:Say,mergeState:mergeState,SLOTS:SLOTS,store:{items:storeItems,item:storeItem,buy:buy,wear:wear,place:place,owns:owns,showing:showing,coins:coins,mastery:masteryPts,migrate:migrateStore,act:storeAct,render:renderStore},get ONLINE(){return ONLINE;},get LIVE(){return LIVE;}};
 /* redraw after the online copy changed under this page */
 function refreshView(){ migrateStore(S); $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
-var BUILD='2026-10-09.2';
+var BUILD='2026-10-13.1';
 function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
   fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
     if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }
 document.addEventListener('visibilitychange',function(){ if(!document.hidden) checkBuild(); });
-function boot(){ checkBuild(); P.current=null; applyWorld(); renderSound(); showProfiles(); Net.refresh(); }
+function boot(){ checkBuild(); P.current=null; applyWorld(); renderSound(); KB.init(); showProfiles(); Net.refresh(); }
 var hot=window.claude&&window.claude.hot;
 if(hot&&typeof hot.ready==='function'){ hot.ready(boot); } else { boot(); }
 try{ if(hot&&typeof hot.snapshot==='function') hot.snapshot(function(){ return {screen:G.screen}; }); }catch(e){}
