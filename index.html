@@ -418,7 +418,7 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 .title{font-size:clamp(2rem,6vw,2.8rem);font-weight:700;color:var(--accent);line-height:1.05}
 .sub{margin:6px 0 0;color:var(--ink-soft);font-weight:600}
 .mode-cap{margin:16px 0 0;font-weight:700;color:var(--ink-soft);font-size:.95rem}
-.mode-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:8px}
+.mode-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:8px}
 @media (max-width:720px){ .mode-list{grid-template-columns:1fr} }
 .mode-lv{align-self:flex-start;font-size:.75rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.3);margin-bottom:2px}
 .mode-study{margin-top:12px;width:100%;min-height:0;flex-direction:row;align-items:center;flex-wrap:wrap;gap:4px 12px;padding:12px 18px}
@@ -965,11 +965,10 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
           <div class="grade-row"><span class="glbl">Word list</span>
             <div class="seg" id="gradeSeg" role="group" aria-label="Word list"><button type="button" class="seg-btn on" data-g="3">3rd grade</button><button type="button" class="seg-btn" data-g="4">4th grade</button></div>
           </div>
-          <p class="mode-cap">Three ways to play, from easiest to hardest:</p>
+          <p class="mode-cap">Two ways to play, from easier to harder:</p>
           <div class="mode-list">
-            <button class="mode-btn" type="button" data-mode="tiles"><span class="mode-lv">Easiest</span><span class="mode-name">Tile Time</span><span class="mode-desc">Tap the mixed-up letters into order.</span></button>
+            <button class="mode-btn" type="button" data-mode="tiles"><span class="mode-lv">Easier</span><span class="mode-name">Tile Time</span><span class="mode-desc">Tap the mixed-up letters into order.</span></button>
             <button class="mode-btn" type="button" data-mode="spell"><span class="mode-lv">Harder</span><span class="mode-name">Spell It</span><span class="mode-desc">Hear the word, then type it out.</span></button>
-            <button class="mode-btn" type="button" data-mode="say"><span class="mode-lv">Hardest</span><span class="mode-name">Say It</span><span class="mode-desc">Spell it out loud, like the real bee.</span></button>
           </div>
           <button class="mode-btn mode-study" type="button" data-mode="list"><span class="mode-name">Word List</span><span class="mode-desc">Study: see, hear, and check every word.</span></button>
           <div class="progress-line"><span>Mastered <b id="masteredCount">0</b> of <b id="totalCount">50</b> <span id="gradeLabel">3rd grade</span> words</span><div class="bar"><i id="masteredBar"></i></div></div>
@@ -2788,7 +2787,7 @@ function renderStore(){ var tab=STORE_TAB, items=storeItems(world()).filter(func
   var gs=storeGroups(tab,items);
   /* every section starts closed, except a tab that has only one, which starts open */
   function isOpen(g){ var k=tab+':'+g.name; return k in STORE_OPEN?STORE_OPEN[k]:gs.length===1; }
-  var note=tab==='pet'?'<div class="mast-note"><span class="mn-star" aria-hidden="true">&#9733;</span><span>Everything here costs <b>mastery points</b>, not '+esc(W().cur)+'. You have <b>'+masteryPts()+'</b>. Master a word to earn one: spell it right <b>3 times in a row</b> with no hints, in Spell It or Say It.</span></div>':'';
+  var note=tab==='pet'?'<div class="mast-note"><span class="mn-star" aria-hidden="true">&#9733;</span><span>Everything here costs <b>mastery points</b>, not '+esc(W().cur)+'. You have <b>'+masteryPts()+'</b>. Master a word to earn one: spell it right <b>3 times in a row</b> with no hints, in Spell It.</span></div>':'';
   $('storeGrid').innerHTML=note+gs.map(function(g){ var n=g.items.length, mine=g.items.filter(owns).length;
     return '<details class="store-group" data-group="'+esc(g.name)+'"'+(isOpen(g)?' open':'')+'><summary class="sg-title"><span class="sg-name">'+esc(g.name)+'</span><span class="sg-count">'+n+' item'+(n===1?'':'s')+(mine?' &middot; '+mine+' yours':'')+'</span>'+(g.note?'<span class="sg-note">'+esc(g.note)+'</span>':'')+'</summary><div class="store-grid">'+g.items.map(card).join('')+'</div></details>'; }).join('');
   $('storeHint').textContent='Spend your '+W().cur+' on outfits and things '+W().where+'. Pets and pet things cost mastery points: one for every word you master.'; }
@@ -2843,7 +2842,7 @@ function refocus(){ if(G.mode==='spell'&&G.phase!=='done'){ try{ $('spellInput')
 function showInfo(html){ $('infoBox').innerHTML=html; $('infoBox').hidden=false; }
 function renderDots(){ $('dots').innerHTML=G.queue.map(function(it,i){ return '<span class="dot '+it.status+(i===G.idx?' now':'')+'"></span>'; }).join(''); }
 function updateStreak(){ $('streakCount').textContent=G.streak; $('streakStat').classList.toggle('hot',G.streak>=3); }
-/* a word is only mastered by spelling it: typed in Spell It or said out loud in Say It, never by tapping tiles */
+/* a word is only mastered by typing it in Spell It, never by tapping tiles */
 function masteryMode(){ return G.mode==='spell'||G.mode==='say'; }
 function currentAnswer(){ if(G.mode==='say') return Say.letters().join(''); if(G.mode==='tiles') return G.tileSel.map(function(i){return G.tileLetters[i];}).join(''); return $('spellInput').value.trim().replace(/[^a-zA-Z]/g,''); }
 function check(){ clearTimeout(G.ttimer);
