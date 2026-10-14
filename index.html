@@ -1414,7 +1414,7 @@ function migrateChars(st){ var c={}, ws=st.worlds||{}, view=(st.look&&CHAR_KEY[s
    the old record is left in place so the service never sees rewards go down */
 function migrateSoccer(st){ if(st.soccerMoved) return st; var ch=st.chars||{}, any=false;
   Object.keys(ch).forEach(function(k){ if(k.indexOf('soccer:')!==0) return; var r=ch[k], key='birds:titanis', t=ch[key]||(ch[key]={pearls:0,wearLevel:null,spent:0,own:[],wear:[]});
-    t.pearls=(t.pearls||0)+(r.pearls||0); t.spent=(t.spent||0)+(r.spent||0); t.refund=(t.refund||0)+(r.refund||0); (r.own||[]).forEach(function(l){ if((t.own=t.own||[]).indexOf(l)<0) t.own.push(l); }); (r.wear||[]).forEach(function(l){ if((t.wear=t.wear||[]).indexOf(l)<0) t.wear.push(l); });
+    t.pearls=(t.pearls||0)+(r.pearls||0); t.spent=(t.spent||0)+(r.spent||0); (r.own||[]).forEach(function(l){ if((t.own=t.own||[]).indexOf(l)<0) t.own.push(l); }); (r.wear||[]).forEach(function(l){ if((t.wear=t.wear||[]).indexOf(l)<0) t.wear.push(l); });
     if(r.decor){ if(!t.decor) t.decor={own:[],on:[]}; (r.decor.own||[]).forEach(function(l){ if(t.decor.own.indexOf(l)<0) t.decor.own.push(l); }); (r.decor.on||[]).forEach(function(l){ if(t.decor.on.indexOf(l)<0) t.decor.on.push(l); }); }
     if(r.pets){ if(!t.pets) t.pets=[]; r.pets.forEach(function(id){ if(t.pets.indexOf(id)<0) t.pets.push(id); }); } any=true; });
   if(st.decor&&st.decor.soccer){ var tb=ch['birds:titanis']||(ch['birds:titanis']={pearls:0,wearLevel:null,spent:0,own:[],wear:[]}); if(!tb.decor) tb.decor={own:[],on:[]}; (st.decor.soccer.own||[]).forEach(function(l){ if(tb.decor.own.indexOf(l)<0) tb.decor.own.push(l); }); (st.decor.soccer.on||[]).forEach(function(l){ if(tb.decor.on.indexOf(l)<0) tb.decor.on.push(l); }); delete st.decor.soccer; any=true; }
@@ -1450,7 +1450,7 @@ function loadState(id){ S=playerState(id); LIVE[id]=S; }
 /* store state: spending only grows (merged like rewards), what is owned is the union, what is worn or shown is the newest choice */
 function grow(m,d,b){ return Math.max(0,Math.max(d||0,b||0)+((m||0)-(b||0))); }
 function union(a,b){ var o=[], seen={}; (a||[]).concat(b||[]).forEach(function(x){ if(!seen[x]){ seen[x]=1; o.push(x); } }); return o; }
-function mergeStore(out,mem,disk,base){ out.storeV=Math.max(mem.storeV||0,disk.storeV||0); out.mspent=grow(mem.mspent,disk.mspent,base.mspent); out.mrefund=Math.max(mem.mrefund||0,disk.mrefund||0);
+function mergeStore(out,mem,disk,base){ out.storeV=Math.max(mem.storeV||0,disk.storeV||0); out.mspent=grow(mem.mspent,disk.mspent,base.mspent);
   out.pets={own:union(mem.pets&&mem.pets.own,disk.pets&&disk.pets.own)}; out.decor={}; var md=mem.decor||{}, dd=disk.decor||{}, ks={};
   Object.keys(md).concat(Object.keys(dd)).forEach(function(k){ ks[k]=1; }); Object.keys(ks).forEach(function(k){ var m=md[k], d=dd[k]||{}; out.decor[k]={own:union(m&&m.own,d.own),on:(m&&m.on)?m.on:(d.on||[])}; }); return out; }
 function mergeState(mem,disk,base){ if(!disk||!base) return mem;
@@ -1463,7 +1463,7 @@ function mergeState(mem,disk,base){ if(!disk||!base) return mem;
   var mc=mem.chars||migrateChars(mem), dc=disk.chars||migrateChars(disk), bc=base.chars||migrateChars(base), ck={};
   out.chars={}; Object.keys(mc).concat(Object.keys(dc)).forEach(function(k){ ck[k]=1; });
   Object.keys(ck).forEach(function(k){ var m=mc[k]||{pearls:0}, d=dc[k]||{pearls:0}, b=bc[k]||{pearls:0};
-    out.chars[k]={pearls:Math.max(0,Math.max(d.pearls||0,b.pearls||0)+((m.pearls||0)-(b.pearls||0))), wearLevel:(m.wearLevel!==undefined?m.wearLevel:(d.wearLevel===undefined?null:d.wearLevel)), spent:grow(m.spent,d.spent,b.spent), refund:Math.max(m.refund||0,d.refund||0), own:union(m.own,d.own), wear:(m.wear?m.wear:(d.wear||[])), pets:union(m.pets,d.pets), decor:{own:union(m.decor&&m.decor.own,d.decor&&d.decor.own), on:(m.decor&&m.decor.on)?m.decor.on:((d.decor&&d.decor.on)||[])}}; });
+    out.chars[k]={pearls:Math.max(0,Math.max(d.pearls||0,b.pearls||0)+((m.pearls||0)-(b.pearls||0))), wearLevel:(m.wearLevel!==undefined?m.wearLevel:(d.wearLevel===undefined?null:d.wearLevel)), spent:grow(m.spent,d.spent,b.spent), own:union(m.own,d.own), wear:(m.wear?m.wear:(d.wear||[])), pets:union(m.pets,d.pets), decor:{own:union(m.decor&&m.decor.own,d.decor&&d.decor.own), on:(m.decor&&m.decor.on)?m.decor.on:((d.decor&&d.decor.on)||[])}}; });
   mergeStore(out,mem,disk,base);
   out.totalCorrect=Math.max(0,Math.max(disk.totalCorrect||0,base.totalCorrect||0)+((mem.totalCorrect||0)-(base.totalCorrect||0)));
   out.bestStreak=Math.max(mem.bestStreak||0,disk.bestStreak||0);
@@ -2729,7 +2729,7 @@ var PET_LV={12:1,17:1};
 var PET_ACC=[{lv:21,slot:'petbow',name:'Pet Bow',price:4},{lv:22,slot:'pethat',name:'Pet Party Hat',price:6},{lv:23,slot:'petcollar',name:'Pet Collar',price:4}];
 var PET_SCENE=[{lv:21,name:'Pet Bed',price:6},{lv:22,name:'Food Bowl',price:4},{lv:23,name:'Pet House',price:10}];
 /* (2026-10-14) Yan: "the items need to be cheaper", then "somewhere between the old and new": every price is two thirds of
-   the 10-09 one (a perfect round of ten words buys one or two things), and migrateStore4 refunds what the 10-09 prices overcharged */
+   the 10-09 one (a perfect round of ten words buys one or two things); nothing is refunded (Yan, 10-14) */
 var COIN_PRICES=[60,120,180,240,300,360,420,480,540,600,450,0,540,600,660,720,0,780,840,900];
 var PET_PRICES={12:8,17:12};
 var SLOT_OF={}; Object.keys(SLOTS).forEach(function(s){ SLOTS[s].forEach(function(lv){ SLOT_OF[lv]=s; }); });
@@ -2749,9 +2749,9 @@ function storeItem(id){ var L=storeItems(world()); for(var i=0;i<L.length;i++) i
 function petsList(){ var r=SW(); if(!r.pets) r.pets=[]; return r.pets; }
 function decorRec(){ var r=SW(); if(!r.decor) r.decor={own:[],on:[]}; if(!r.decor.own) r.decor.own=[]; if(!r.decor.on) r.decor.on=[]; return r.decor; }
 function wearList(){ var r=SW(); if(!r.own) r.own=[]; if(!r.wear) r.wear=[]; return r.wear; }
-function coins(){ var r=SW(); return (r.pearls||0)-(r.spent||0)+(r.refund||0); }
+function coins(){ var r=SW(); return (r.pearls||0)-(r.spent||0); }
 function masteryEarned(){ return countMastered(WORDS3)+countMastered(WORDS4); }
-function masteryPts(){ return masteryEarned()-(S.mspent||0)+(S.mrefund||0); }
+function masteryPts(){ return masteryEarned()-(S.mspent||0); }
 function isScene(it){ return it.kind==='decor'||it.kind==='petscene'; }
 function owns(it){ if(it.cur==='mastery') return petsList().indexOf(it.id)>=0; return (isScene(it)?decorRec().own:(SW().own||[])).indexOf(it.lv)>=0; }
 function showing(it){ return (isScene(it)?decorRec().on:wearList()).indexOf(it.lv)>=0; }
@@ -2771,20 +2771,17 @@ function buy(it){ if(owns(it)||!canAfford(it)) return false;
 /* what a kid already reached by level before the store existed is theirs: those outfits, that look, that scenery, and any pet.
    Runs on a freshly loaded save, so it reads only that save. */
 function oldLook(l,wl){ if(l>wl) return false; var t=SLOTS[SLOT_OF[l]]||[l]; for(var i=0;i<t.length;i++){ if(t[i]>l&&t[i]<=wl) return false; } return true; }
-function migrateStore(st){ migrateStore1(st); migrateStore2(st); migrateStore3(st); return migrateStore4(st); }
-/* (2026-10-09) what a kid already owned was charged for at that day's prices. Undone on 2026-10-14 (Yan: "refund the kids"):
-   this step no longer charges anything, and migrateStore4 hands back what it charged. */
-function migrateStore3(st){ if((st.storeV||0)<3) st.storeV=3; return st; }
-/* (2026-10-14) the refund. Everything from levels 1-20 and the two level pets came free with the level hand-out, so the coins
-   and mastery points spent on them come back; only things that can only be bought in the store (the shared accessories, pet
-   accessories, pet things in the scene) stay paid for, at today's prices. The refund lives in its own fields (r.refund, st.mrefund),
-   which every merge keeps at their highest and the service never lets drop, so an old tab can't undo it. Once per save. */
-function migrateStore4(st){ if((st.storeV||0)>=4) return st; st.storeV=4; var ch=st.chars||{}, pet=0;
-  Object.keys(ch).forEach(function(key){ var k=key.split(':')[0], r=ch[key]; if(!WORLDS[k]||!r) return; var at={}, keep=0; storeItems(k).forEach(function(it){ at[it.id]=it; });
-    function count(it){ if(!it||it.lv<=20) return; if(it.cur==='mastery') pet+=it.price; else keep+=it.price; }
+function migrateStore(st){ migrateStore1(st); migrateStore2(st); return migrateStore3(st); }
+/* (2026-10-09) what a kid already owns counts as bought, at today's prices. The level items the store hand-out gave them had
+   left every balance untouched, so a kid with thousands banked could buy the whole wall in one sitting; Yan wants a round of
+   spelling to buy two or three things. Balances never go below zero, and nothing owned or earned is taken away. */
+function migrateStore3(st){ if((st.storeV||0)>=3) return st; st.storeV=3; var ch=st.chars||{}, petVal=0;
+  function masteredIn(){ var n=0; WORDS3.concat(WORDS4).forEach(function(w){ var x=st.words&&st.words[w.w]; if(x&&(x.mastered||x.streak>=3)) n++; }); return n; }
+  Object.keys(ch).forEach(function(key){ var k=key.split(':')[0], r=ch[key]; if(!WORLDS[k]||!r) return; var at={}; storeItems(k).forEach(function(it){ at[it.id]=it; }); var val=0;
+    function count(it){ if(!it) return; if(it.cur==='mastery') petVal+=it.price; else val+=it.price; }
     (r.own||[]).forEach(function(l){ count(at['o'+l]); }); ((r.decor&&r.decor.own)||[]).forEach(function(l){ count(at['d'+l]); }); (r.pets||[]).forEach(function(id){ count(at[id]); });
-    var back=(r.spent||0)-(r.refund||0)-keep; if(back>0) r.refund=(r.refund||0)+back; });
-  var mback=(st.mspent||0)-(st.mrefund||0)-pet; if(mback>0) st.mrefund=(st.mrefund||0)+mback;
+    r.spent=Math.max(r.spent||0,Math.min(r.pearls||0,val)); });
+  if(petVal) st.mspent=Math.max(st.mspent||0,Math.min(masteredIn(),petVal));
   return st; }
 function migrateStore1(st){ if(st.storeV) return st; st.storeV=1; if(!st.pets) st.pets={own:[]}; if(!st.decor) st.decor={};
   function mastered(list){ var n=0; for(var i=0;i<list.length;i++){ var x=st.words&&st.words[list[i].w]; if(x&&(x.mastered||x.streak>=3)) n++; } return n; }
@@ -3241,7 +3238,7 @@ window.__spelling={kb:KB,get G(){return G;},get S(){return S;},get P(){return P;
 /* redraw after the online copy changed under this page */
 function refreshView(){ migrateStore(S); $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */
-var BUILD='2026-10-14.3';
+var BUILD='2026-10-14.4';
 function checkBuild(){ if(!/^https?:$/.test(location.protocol)||!window.fetch) return;
   fetch(location.pathname+'?check='+Date.now(),{cache:'no-store'}).then(function(r){ return r.text(); }).then(function(t){ var m=t.match(/var BUILD='([^']+)'/);
     if(m&&m[1]!==BUILD&&location.search.indexOf('v='+m[1])<0) location.replace(location.pathname+'?v='+encodeURIComponent(m[1])); }).catch(function(){}); }
