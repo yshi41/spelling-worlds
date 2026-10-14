@@ -52,8 +52,14 @@ const PROBE = () => {
       if (kid === 'charlie' || kid === 'hallie') {
         await click('#worldBtn'); await sleep(300); await report(T(kid + ' world picker open'), w); await click('#worldCancel'); await sleep(200);
         await page.evaluate(() => { __spelling.SW().pearls = 700; __spelling.WORDS4.slice(0, 8).forEach(x => { __spelling.S.words[x.w] = { mastered: true, streak: 3, right: 3, wrong: 0, seen: 3 }; }); ['o1', 'd1', 'o12'].forEach(id => __spelling.store.act(id, 'buy')); });
-        await page.$eval('.card.store', el => el.scrollIntoView({ block: 'start' })); await sleep(200);
-        for (const tab of ['outfit', 'decor', 'pet']) { await click('#storeTabs .chip[data-tab="' + tab + '"]'); await sleep(200); await report(T(kid + ' store ' + tab), w); await page.evaluate(() => document.querySelectorAll('#storeGrid details').forEach(d => { d.open = true; })); await sleep(200); await report(T(kid + ' store ' + tab + ' all open'), w); }
+        await page.$eval('.card.store', el => el.scrollIntoView({ block: 'start' })); await sleep(200); await report(T(kid + ' home store card'), w);
+        await click('#storeOpen'); await sleep(300);
+        for (const tab of ['outfit', 'decor', 'pet']) { await click('#storeTabs .chip[data-tab="' + tab + '"]'); await sleep(200); await report(T(kid + ' store ' + tab), w);
+          const first = await page.evaluate(() => { const t = document.querySelector('#storeGrid .cat-tile'); if (t) t.click(); return !!t; }); await sleep(200); if (first) await report(T(kid + ' store ' + tab + ' section'), w);
+          const tried = await page.evaluate(() => { const b = document.querySelector('#storeGrid [data-act="try"]'); if (b) b.click(); return !!b; }); await sleep(250); if (tried) await report(T(kid + ' store ' + tab + ' trying'), w);
+          await page.evaluate(() => { document.getElementById('app').classList.remove('store-look'); __spelling.store.tryOn(null); const b = document.querySelector('#storeGrid [data-cats]'); if (b) b.click(); }); await sleep(150); }
+        await page.$eval('main', el => { el.scrollTop = el.scrollHeight; }); await sleep(150); await report(T(kid + ' store scrolled'), w);
+        await click('#storeBack'); await sleep(300);
         await page.$eval('.card.settings', el => el.scrollIntoView({ block: 'start' })); await sleep(150); await click('#resetBtn'); await sleep(200); await report(T(kid + ' settings reset confirm'), w); await click('#resetNo'); await sleep(100);
       }
     }

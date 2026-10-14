@@ -478,19 +478,58 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 @media (max-width:420px){.store-tabs .chip .st-name{font-size:.86rem}.store-tabs .chip .st-ic{width:21px;height:21px}.store-tabs .chip{padding:8px 2px}}
 .store-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:10px}
 #storeGrid{display:block}
-/* each spot is a rounded row that opens into a panel, like the sections of Yan's dashboard: a triangle, the name, a count */
-.store-group{border:2px solid var(--line);border-radius:16px;background:var(--surface-2);margin:0 0 8px;overflow:hidden}
-.store-group[open]{background:var(--surface)}
-.sg-title{font-family:var(--display),sans-serif;font-weight:600;font-size:1.1rem;min-height:52px;padding:8px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;color:var(--ink);cursor:pointer;list-style:none;-webkit-tap-highlight-color:transparent;user-select:none}
-.sg-title::-webkit-details-marker{display:none}
-.sg-title::before{content:"\25B8";font-size:1rem;color:var(--ink-soft);width:1em;text-align:center}
-.store-group[open]>.sg-title{background:var(--surface-2);border-bottom:2px solid var(--line)}
-.store-group[open]>.sg-title::before{content:"\25BE"}
-.sg-title:focus-visible{outline:3px solid var(--sky);outline-offset:-3px;border-radius:14px}
-.store-group[open]>.store-grid{padding:12px}
-.sg-count{font-family:inherit;font-size:.78rem;font-weight:700;color:var(--ink-soft);border:2px solid var(--line);border-radius:999px;padding:1px 9px;background:var(--surface)}
-.sg-note{font-family:inherit;font-size:.78rem;font-weight:700;color:var(--ink-soft)}
-.sg-note::before{content:"\00B7";margin-right:6px}
+/* (2026-10-13) the store is its own screen: a bar that stays at the top with the balances, the character trying things on,
+   and each tab's sections as big tiles; tapping a tile opens that section's items */
+.store-bar{position:sticky;top:-18px;z-index:6;display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;background:var(--surface);border-radius:0 0 20px 20px;box-shadow:var(--shadow);padding:10px 14px;margin:-18px 0 14px}
+.store-bar .store-title{margin:0;font-family:var(--display),sans-serif;font-weight:700;font-size:1.4rem;color:var(--accent);line-height:1.1}
+.store-bar .store-bal{margin-left:auto}
+.store-layout{display:grid;grid-template-columns:230px minmax(0,1fr);gap:16px;align-items:start}
+.store-preview{position:sticky;top:70px;z-index:4;display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;background:var(--surface);border-radius:24px;box-shadow:var(--shadow);padding:14px}
+.store-preview .axo-box{max-width:190px}
+.sp-text{display:flex;flex-direction:column;align-items:center;gap:8px;min-width:0}
+.sp-label{font-weight:700;color:var(--ink-soft);line-height:1.3}
+.sp-label b{color:var(--ink)}
+.sp-price{font-size:.85rem;font-weight:800;color:var(--ink-soft);display:inline-flex;align-items:center;gap:4px}
+.sp-price .bal-ic{width:14px;height:14px}
+.sp-actions{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.sp-actions:empty{display:none}
+.store-preview.trying{outline:3px solid var(--sky);outline-offset:-3px}
+/* Look: the store fades away for a few seconds so a decoration being tried can be seen in the scene */
+.store-main{transition:opacity .3s}
+#app.store-look .store-main{opacity:.05;pointer-events:none}
+.store-open{width:100%;margin-top:10px}
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+.cat-tile{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:4px;min-width:0;padding:10px 8px 12px;border:2px solid var(--line);border-radius:18px;background:var(--surface-2);color:var(--ink);font:inherit;text-align:center;cursor:pointer;box-shadow:0 4px 0 var(--line);transition:transform .08s,box-shadow .08s;-webkit-tap-highlight-color:transparent}
+.cat-tile:active{transform:translateY(3px);box-shadow:0 1px 0 var(--line)}
+.cat-tile:focus-visible{outline:3px solid var(--sky);outline-offset:2px}
+@media (hover:hover){.cat-tile:hover{background:var(--surface)}}
+.cat-tile svg{width:78px;height:70px;overflow:visible}
+.cat-tile .axo,.cat-tile .gill,.cat-tile .ear,.cat-tile .eye-open,.cat-tile .aura,.cat-tile .spark,.cat-tile .gglow,.cat-tile .heart{animation:none}
+.cat-tile .si-swatch{width:70px;height:70px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--sky-soft),var(--good-soft));border:3px solid var(--line);font-family:var(--display),sans-serif;font-weight:700;font-size:1.8rem;color:var(--ink-soft)}
+.cat-tile .ct-name{font-family:var(--display),sans-serif;font-weight:600;font-size:1.15rem;line-height:1.15}
+.cat-tile .ct-count{font-size:.78rem;font-weight:700;color:var(--ink-soft);border:2px solid var(--line);border-radius:999px;padding:1px 9px;background:var(--surface)}
+.cat-tile .ct-note{font-size:.78rem;font-weight:700;color:var(--ink-soft)}
+.cat-tile.k-mast{background:var(--gold);border-color:var(--gold-deep);box-shadow:0 4px 0 var(--gold-deep)}
+.cat-tile.k-mast .ct-name,.cat-tile.k-mast .ct-note{color:var(--gold-ink)}
+.cat-head{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap;margin:0 0 12px}
+.cat-head .ct-title{margin:0;font-family:var(--display),sans-serif;font-weight:600;font-size:1.3rem}
+.cat-head .sg-note{font-size:.78rem;font-weight:700;color:var(--ink-soft)}
+.shop-item.trying{border-color:var(--sky);box-shadow:0 0 0 3px var(--sky)}
+@media (max-width:760px),(max-height:520px){
+  /* on a phone (or a short landscape screen) the character trying things on rides along the bottom of the screen */
+  .store-layout{display:flex;flex-direction:column;align-items:stretch;gap:12px}
+  .store-preview{order:2;position:sticky;top:auto;bottom:-32px;margin-bottom:-32px;flex-direction:row;align-items:center;text-align:left;gap:10px;padding:8px 12px;border-radius:20px 20px 0 0;box-shadow:0 -4px 16px rgba(0,0,0,.12)}
+  .store-preview .axo-box{width:74px;flex:0 0 auto;margin:0}
+  .sp-text{align-items:flex-start;flex:1}
+  .sp-label{font-size:.9rem}
+  .sp-actions{justify-content:flex-start}
+  .sp-actions .btn-sm{padding:7px 12px;min-height:38px}
+  .store-bar .store-title{font-size:1.2rem}
+}
+/* a wide but short screen keeps the tray to one row: words on the left, buttons on the right */
+@media (min-width:600px) and (max-height:520px){ .sp-text{flex-direction:row;align-items:center;justify-content:space-between;gap:12px} .store-preview .axo-box{width:60px} }
+/* on a narrow phone the bar is one line: Home and the two balances, each shown by its coin or star */
+@media (max-width:420px){ .store-bar{flex-wrap:nowrap;padding:8px 10px} .store-bar .store-title,.store-bar .bal-word{display:none} .store-bar .store-bal{flex-wrap:nowrap} }
 .shop-item{border:2px solid var(--line);background:var(--surface-2);border-radius:16px;padding:8px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center}
 .shop-item svg{width:78px;height:70px;overflow:visible}
 .shop-item .axo,.shop-item .gill,.shop-item .ear,.shop-item .eye-open,.shop-item .aura,.shop-item .spark,.shop-item .gglow,.shop-item .heart{animation:none}
@@ -516,7 +555,6 @@ main{flex:1 1 auto;overflow:auto;padding-block:18px 32px;padding-inline:16px;-we
 .shop-item .si-swatch{width:70px;height:70px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--sky-soft),var(--good-soft));border:3px solid var(--line);font-family:var(--display),sans-serif;font-weight:700;font-size:1.8rem;color:var(--ink-soft)}
 .shop-item.owned .si-swatch{border-color:var(--good);color:var(--good)}
 .shop-item .btn-sm{padding:8px 14px;min-height:38px;font-size:.85rem;white-space:normal}
-.shop-item .si-peek{padding:6px 12px;min-height:36px;font-size:.78rem}
 .settings label{display:flex;align-items:center;gap:10px;font-weight:700;margin-bottom:10px;flex-wrap:wrap}
 .settings select{font:inherit;font-weight:700;padding:8px 12px;border-radius:12px;border:2px solid var(--line);background:var(--surface-2);color:var(--ink)}
 .settings input[type=checkbox]{width:22px;height:22px;accent-color:var(--good)}
@@ -980,10 +1018,9 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
           <p class="hint-text char-max" id="charMax"></p>
         </div>
         <div class="card store">
-          <div class="store-head"><h3 id="storeTitle">Reward Store</h3><div class="store-bal"><span class="bal"><span class="bal-ic coin-ic" aria-hidden="true"></span><b id="balCoins">0</b>&nbsp;<span id="balCur">pearls</span></span><span class="bal mast"><span class="bal-ic star-ic" aria-hidden="true">&#9733;</span><b id="balMast">0</b>&nbsp;mastery points</span></div></div>
-          <p class="hint-text" id="storeHint">Spend your pearls on outfits and things in the lagoon. Pets and pet things cost mastery points: one for every word you master.</p>
-          <div class="chips store-tabs" id="storeTabs" role="tablist" aria-label="Store sections"><button class="chip on" type="button" role="tab" aria-selected="true" data-tab="outfit"><svg class="st-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 15a7 7 0 0 1 14 0"/><path d="M2.5 15.5h19"/><path d="M8.5 12.2c1.1-.6 2.3-.9 3.5-.9s2.4.3 3.5.9"/></svg><span class="st-name">Outfits</span><span class="st-sub" data-count="outfit">items</span></button><button class="chip" type="button" role="tab" aria-selected="false" data-tab="decor"><svg class="st-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="M3.5 16.5l4.5-4.5 4 4 2.5-2.5 6 6"/><circle cx="15.5" cy="8.5" r="1.6"/></svg><span class="st-name">Decorations</span><span class="st-sub" data-count="decor">items</span></button><button class="chip chip-mast" type="button" role="tab" aria-selected="false" data-tab="pet"><svg class="st-ic st-fill" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7.6" cy="7.6" r="2.1"/><circle cx="16.4" cy="7.6" r="2.1"/><circle cx="3.8" cy="12.6" r="1.9"/><circle cx="20.2" cy="12.6" r="1.9"/><path d="M12 11c-3 0-5.8 3.1-5.8 5.8 0 1.5 1.1 2.6 2.6 2.6 1.2 0 2.1-.8 3.2-.8s2 .8 3.2.8c1.5 0 2.6-1.1 2.6-2.6C17.8 14.1 15 11 12 11z"/></svg><span class="st-name">Pets</span><span class="st-sub"><span class="st-star" aria-hidden="true">&#9733;</span> mastery points</span></button></div>
-          <div class="store-grid" id="storeGrid"></div>
+          <div class="store-head"><h3>Reward Store</h3><div class="store-bal"><span class="bal"><span class="bal-ic coin-ic" aria-hidden="true"></span><b id="homeCoins">0</b>&nbsp;<span id="homeCur">pearls</span></span><span class="bal mast"><span class="bal-ic star-ic" aria-hidden="true">&#9733;</span><b id="homeMast">0</b>&nbsp;mastery points</span></div></div>
+          <p class="hint-text" id="storeHintHome">Outfits, decorations and pets. Try anything on before you buy it.</p>
+          <button class="btn btn-good btn-big store-open" id="storeOpen" type="button">Open the Store</button>
         </div>
         <div class="card settings">
           <h3>Settings</h3>
@@ -994,6 +1031,24 @@ button,.tile,.chip,.seg-btn{touch-action:manipulation}
           <div class="row"><button class="btn btn-ghost btn-sm" id="resetBtn" type="button">Reset this player's progress</button></div>
           <div class="confirm" id="resetConfirm" hidden>Erase this player's rewards, stars, and levels for every character? <button class="btn btn-sm" id="resetYes" type="button">Yes, erase</button><button class="btn btn-ghost btn-sm" id="resetNo" type="button">Keep them</button></div>
         </div>
+      </div>
+    </div>
+   </section>
+   <section class="screen" id="scr-store" hidden>
+    <div class="store-bar" id="storeBar">
+      <button class="btn btn-ghost btn-sm" id="storeBack" type="button">Home</button>
+      <h2 class="store-title" id="storeTitle">Reward Store</h2>
+      <div class="store-bal"><span class="bal"><span class="bal-ic coin-ic" aria-hidden="true"></span><b id="balCoins">0</b><span class="bal-word">&nbsp;<span id="balCur">pearls</span></span></span><span class="bal mast"><span class="bal-ic star-ic" aria-hidden="true">&#9733;</span><b id="balMast">0</b><span class="bal-word">&nbsp;mastery points</span></span></div>
+    </div>
+    <div class="store-layout">
+      <aside class="store-preview" id="storePreview" aria-live="polite">
+        <div class="axo-box" id="axoStore"></div>
+        <div class="sp-text"><div class="sp-label" id="spLabel"></div><div class="sp-actions" id="spActions"></div></div>
+      </aside>
+      <div class="card store-main" id="storeMain">
+        <p class="hint-text" id="storeHint">Spend your pearls on outfits and things in the lagoon. Pets and pet things cost mastery points: one for every word you master.</p>
+        <div class="chips store-tabs" id="storeTabs" role="tablist" aria-label="Store sections"><button class="chip on" type="button" role="tab" aria-selected="true" data-tab="outfit"><svg class="st-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 15a7 7 0 0 1 14 0"/><path d="M2.5 15.5h19"/><path d="M8.5 12.2c1.1-.6 2.3-.9 3.5-.9s2.4.3 3.5.9"/></svg><span class="st-name">Outfits</span><span class="st-sub" data-count="outfit">items</span></button><button class="chip" type="button" role="tab" aria-selected="false" data-tab="decor"><svg class="st-ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="M3.5 16.5l4.5-4.5 4 4 2.5-2.5 6 6"/><circle cx="15.5" cy="8.5" r="1.6"/></svg><span class="st-name">Decorations</span><span class="st-sub" data-count="decor">items</span></button><button class="chip chip-mast" type="button" role="tab" aria-selected="false" data-tab="pet"><svg class="st-ic st-fill" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7.6" cy="7.6" r="2.1"/><circle cx="16.4" cy="7.6" r="2.1"/><circle cx="3.8" cy="12.6" r="1.9"/><circle cx="20.2" cy="12.6" r="1.9"/><path d="M12 11c-3 0-5.8 3.1-5.8 5.8 0 1.5 1.1 2.6 2.6 2.6 1.2 0 2.1-.8 3.2-.8s2 .8 3.2.8c1.5 0 2.6-1.1 2.6-2.6C17.8 14.1 15 11 12 11z"/></svg><span class="st-name">Pets</span><span class="st-sub"><span class="st-star" aria-hidden="true">&#9733;</span> mastery points</span></button></div>
+        <div id="storeGrid"></div>
       </div>
     </div>
    </section>
@@ -2746,12 +2801,20 @@ function migrateStore2(st){ if((st.storeV||0)>=2) return st; st.storeV=2; var ch
     (d[k].own||[]).forEach(function(l){ if(r.decor.own.indexOf(l)<0) r.decor.own.push(l); }); (d[k].on||[]).forEach(function(l){ if(r.decor.on.indexOf(l)<0) r.decor.on.push(l); }); delete d[k]; });
   var own=(st.pets&&st.pets.own)||[]; if(own.length){ var view=(st.look&&CHAR_KEY[st.look])?st.look:(st.theme||(st.grade==='4'?'candy':'lagoon')), ta=top(null), r=ta?ch[ta]:rec(view,st[CHAR_KEY[view]]||CHAR_DEF[view]); if(!r.pets) r.pets=[]; own.forEach(function(id){ if(r.pets.indexOf(id)<0) r.pets.push(id); }); st.pets.own=[]; }
   return st; }
-/* the store card on the home screen */
-var STORE_TAB='outfit', PEEK=null, peekT=null;
-/* which store sections are open, by tab and heading; kept only while the game is open (nothing is stored in the browser) */
-var STORE_OPEN={};
+/* the store screen. TRYING is the item being tried on (an outfit on the character in the store, a decoration in the scene);
+   STORE_CAT is the open section of each tab, null for the tiles. Both are kept only while the game is open. */
+var STORE_TAB='outfit', PEEK=null, peekT=null, TRYING=null;
+var STORE_CAT={outfit:null,decor:null,pet:null};
 function applyWear(root,list){ var els=root.querySelectorAll('.acc'); for(var i=0;i<els.length;i++){ var lv=parseInt(els[i].getAttribute('data-lv'),10); els[i].classList.toggle('on',list.indexOf(lv)>=0); } }
-function setOutfit(){ var w=wearList(), a=document.querySelectorAll('.axo-box .axo'); for(var i=0;i<a.length;i++) applyWear(a[i],w); }
+function setOutfit(){ var w=wearList(), a=document.querySelectorAll('.axo-box .axo'); for(var i=0;i<a.length;i++) applyWear(a[i],a[i].closest('#axoStore')?previewWear():w); }
+/* what the character in the store wears: its own outfit with the item being tried in its spot (a pet comes out for pet things) */
+function previewWear(){ var w=wearList().slice(), it=TRYING&&storeItem(TRYING); if(!it||isScene(it)) return w;
+  function rm(o){ var j=w.indexOf(o); if(j>=0) w.splice(j,1); }
+  if(it.kind==='petacc'&&w.indexOf(12)<0) w.push(12);
+  slotsOf(it.lv).forEach(function(sl){ SLOTS[sl].forEach(rm); });
+  if(w.indexOf(it.lv)<0) w.push(it.lv); return w; }
+function tryOn(id){ clearTimeout(peekT); TRYING=(id&&TRYING!==id)?id:null; var it=TRYING&&storeItem(TRYING); PEEK=it&&isScene(it)?it.lv:null;
+  setOutfit(); renderScene(); renderStore(); if(TRYING) jump('axoStore'); if(it&&isScene(it)&&G.screen==='scr-store') look(); else unlook(); }
 function renderScene(){ var on=decorRec().on, els=$('scene').querySelectorAll('[data-lv]');
   for(var i=0;i<els.length;i++){ var lv=parseInt(els[i].getAttribute('data-lv'),10); els[i].classList.toggle('on',on.indexOf(lv)>=0||lv===PEEK); } }
 function peek(lv){ clearTimeout(peekT); PEEK=lv; renderScene(); peekT=setTimeout(function(){ PEEK=null; renderScene(); },3500); }
@@ -2776,30 +2839,45 @@ function storeGroups(tab,items){ var groups=[], by={};
   else items.forEach(function(it){ add('Decorations','show as many as you like',it); });
   return groups; }
 function renderStore(){ var tab=STORE_TAB, items=storeItems(world()).filter(function(it){ return tab==='pet'?it.cur==='mastery':tab==='decor'?it.kind==='decor':it.kind==='outfit'; });
-  $('balCoins').textContent=coins(); $('balCur').textContent=W().cur; $('balMast').textContent=masteryPts();
+  $('balCoins').textContent=$('homeCoins').textContent=coins(); $('balCur').textContent=$('homeCur').textContent=W().cur; $('balMast').textContent=$('homeMast').textContent=masteryPts();
   var tabs=document.querySelectorAll('#storeTabs .chip'); for(var i=0;i<tabs.length;i++){ var sel=tabs[i].getAttribute('data-tab')===tab; tabs[i].classList.toggle('on',sel); tabs[i].setAttribute('aria-selected',sel?'true':'false'); }
   /* each tab says how much is in it */
   var cnt={outfit:0,decor:0,pet:0}; storeItems(world()).forEach(function(it){ cnt[it.cur==='mastery'?'pet':it.kind==='decor'?'decor':'outfit']++; });
   var subs=document.querySelectorAll('#storeTabs [data-count]'); for(i=0;i<subs.length;i++){ var c=cnt[subs[i].getAttribute('data-count')]||0; subs[i].textContent=c+' item'+(c===1?'':'s'); }
-  function card(it){ var own=owns(it), on=own&&showing(it);
+  function card(it){ var own=owns(it), on=own&&showing(it), t=TRYING===it.id;
     var m=it.cur==='mastery';
-    return '<div class="shop-item'+(own?' owned':'')+(on?' on':'')+' k-'+it.kind+(m?' k-mast':'')+'" data-id="'+it.id+'">'+(m?'<span class="si-tag">&#9733; Mastery</span>':'')+itemPic(it)+'<div class="si-name">'+esc(it.name)+'</div><div class="si-price">'+(own?(on?(isScene(it)?'Showing':'Wearing'):'Yours'):priceText(it))+'</div>'+itemButton(it)+(isScene(it)&&!own?'<button type="button" class="btn btn-ghost btn-sm si-peek" data-act="peek">Peek</button>':'')+'</div>'; }
+    return '<div class="shop-item'+(own?' owned':'')+(on?' on':'')+(t?' trying':'')+' k-'+it.kind+(m?' k-mast':'')+'" data-id="'+it.id+'">'+(m?'<span class="si-tag">&#9733; Mastery</span>':'')+itemPic(it)+'<div class="si-name">'+esc(it.name)+'</div><div class="si-price">'+(own?(on?(isScene(it)?'Showing':'Wearing'):'Yours'):priceText(it))+'</div>'+itemButton(it)+(!own?'<button type="button" class="btn btn-ghost btn-sm si-try" data-act="try" aria-pressed="'+t+'">'+(t?'Stop trying':'Try it')+'</button>':'')+'</div>'; }
   var gs=storeGroups(tab,items);
-  /* every section starts closed, except a tab that has only one, which starts open */
-  function isOpen(g){ var k=tab+':'+g.name; return k in STORE_OPEN?STORE_OPEN[k]:gs.length===1; }
+  /* a tab with one section shows its items straight away; otherwise each section is a tile */
+  var open=gs.length===1?gs[0]:gs.filter(function(g){ return g.name===STORE_CAT[tab]; })[0];
   var note=tab==='pet'?'<div class="mast-note"><span class="mn-star" aria-hidden="true">&#9733;</span><span>Everything here costs <b>mastery points</b>, not '+esc(W().cur)+'. You have <b>'+masteryPts()+'</b>. Master a word to earn one: spell it right <b>3 times in a row</b> with no hints, in Spell It.</span></div>':'';
-  $('storeGrid').innerHTML=note+gs.map(function(g){ var n=g.items.length, mine=g.items.filter(owns).length;
-    return '<details class="store-group" data-group="'+esc(g.name)+'"'+(isOpen(g)?' open':'')+'><summary class="sg-title"><span class="sg-name">'+esc(g.name)+'</span><span class="sg-count">'+n+' item'+(n===1?'':'s')+(mine?' &middot; '+mine+' yours':'')+'</span>'+(g.note?'<span class="sg-note">'+esc(g.note)+'</span>':'')+'</summary><div class="store-grid">'+g.items.map(card).join('')+'</div></details>'; }).join('');
-  $('storeHint').textContent='Spend your '+W().cur+' on outfits and things '+W().where+'. Pets and pet things cost mastery points: one for every word you master.'; }
+  function count(g){ var n=g.items.length, mine=g.items.filter(owns).length; return n+' item'+(n===1?'':'s')+(mine?' &middot; '+mine+' yours':''); }
+  function tile(g){ var m=g.items[0].cur==='mastery';
+    return '<button type="button" class="cat-tile'+(m?' k-mast':'')+'" data-cat="'+esc(g.name)+'">'+itemPic(g.items[0])+'<span class="ct-name">'+esc(g.name)+'</span><span class="ct-count">'+count(g)+'</span>'+(g.note?'<span class="ct-note">'+esc(g.note)+'</span>':'')+'</button>'; }
+  $('storeGrid').innerHTML=note+(open
+    ?'<div class="cat-head">'+(gs.length>1?'<button type="button" class="btn btn-ghost btn-sm" data-cats="1">&#8249; All '+(tab==='outfit'?'outfits':tab==='pet'?'pet things':'decorations')+'</button>':'')+'<h4 class="ct-title">'+esc(open.name)+'</h4>'+(open.note?'<span class="sg-note">'+esc(open.note)+'</span>':'')+'</div><div class="store-grid" data-group="'+esc(open.name)+'">'+open.items.map(card).join('')+'</div>'
+    :'<div class="cat-grid">'+gs.map(tile).join('')+'</div>');
+  $('storeHint').textContent='Spend your '+W().cur+' on outfits and things '+W().where+'. Pets and pet things cost mastery points: one for every word you master.';
+  renderPreview(); }
+/* the character in the store wears whatever is being tried; the panel says what it is and lets the kid buy it or stop */
+function renderPreview(){ var it=TRYING&&storeItem(TRYING); $('storePreview').classList.toggle('trying',!!it);
+  if(!it){ $('spLabel').innerHTML='Tap <b>Try it</b> on anything to see it on '+esc(mascotName())+' before you buy it.'; $('spActions').innerHTML=''; return; }
+  $('spLabel').innerHTML=(isScene(it)?'Trying <b>'+esc(it.name)+'</b> '+esc(W().where)+'.':'Trying on <b>'+esc(it.name)+'</b>')+'<br><span class="sp-price">'+priceText(it)+'</span>';
+  $('spActions').innerHTML=(canAfford(it)?'<button type="button" class="btn '+(it.cur==='mastery'?'btn-mast':'btn-good')+' btn-sm" data-act="buy">Buy it</button>':'<button type="button" class="btn btn-ghost btn-sm" disabled>'+(it.cur==='mastery'?'Master more words':'Earn more '+W().cur)+'</button>')+(isScene(it)?'<button type="button" class="btn btn-sky btn-sm" data-act="look">Look</button>':'')+'<button type="button" class="btn btn-ghost btn-sm" data-act="stop">Stop trying</button>'; }
+var lookT=null;
+function look(){ clearTimeout(lookT); $('app').classList.add('store-look'); lookT=setTimeout(unlook,3000); }
+function unlook(){ clearTimeout(lookT); $('app').classList.remove('store-look'); }
+function openStore(){ TRYING=null; PEEK=null; STORE_CAT={outfit:null,decor:null,pet:null}; refreshMascots(); renderScene(); renderStore(); show('scr-store'); SFX.warm(); SFX.tick(); }
+function closeStore(){ clearTimeout(peekT); unlook(); TRYING=null; PEEK=null; renderScene(); goHome(); }
 function storeAct(id,act){ var it=storeItem(id); if(!it) return; SFX.warm();
+  if(act==='try'){ tryOn(id); SFX.tick(); return; }
   if(act==='peek'){ peek(it.lv); SFX.tick(); return; }
-  clearTimeout(peekT); PEEK=null;
-  if(act==='buy'){ if(!buy(it)) return; SFX.unlock(); confettiBurst(1); jump('axoHome'); toast('You got '+it.name+'!'); }
+  if(act==='buy'){ if(!buy(it)) return; clearTimeout(peekT); TRYING=null; PEEK=null; SFX.unlock(); confettiBurst(1); toast('You got '+it.name+'!'); }
   else { if(isScene(it)) place(it.lv,!showing(it)); else if(!wear(it.lv,!showing(it))){ toast('Bring a pet out first.'); return; } save(); SFX.pop(); }
-  setOutfit(); renderScene(); renderStore(); if(act!=='buy') jump('axoHome'); }
+  setOutfit(); renderScene(); renderStore(); jump(G.screen==='scr-store'?'axoStore':'axoHome'); }
 /* the round */
 var G={screen:'scr-home',mode:'spell',queue:[],idx:0,cur:null,phase:'answer',hinted:0,retry:[],stats:null,streak:0,timer:null,tileLetters:[],tileSel:[]};
-function show(id){ if(PICKING&&id!=='scr-home') endPick(); ['scr-profiles','scr-home','scr-play','scr-words','scr-summary'].forEach(function(s){ $(s).hidden=(s!==id); }); G.screen=id; $('app').setAttribute('data-screen',id); $('main').scrollTop=0; }
+function show(id){ if(PICKING&&id!=='scr-home') endPick(); ['scr-profiles','scr-home','scr-store','scr-play','scr-words','scr-summary'].forEach(function(s){ $(s).hidden=(s!==id); }); G.screen=id; $('app').setAttribute('data-screen',id); $('main').scrollTop=0; }
 function poolWords(){ return activeWords().slice(); }
 function buildQueue(only){
   var p=(only?only.slice():poolWords()).map(function(w){ var st=wstat(w.w); return {w:w,k:st.streak*3-st.wrong*2-(st.seen===0?2:0)+Math.random()*4}; });
@@ -3004,7 +3082,7 @@ function applyWorld(){
   refreshMascots();
   renderScene(); renderLevelBar(false); $('pearlCount').textContent=SW().pearls;
 }
-function refreshMascots(){ $('axoHome').innerHTML=axoSVG(); $('axoPlay').innerHTML=axoSVG(); $('axoSummary').innerHTML=axoSVG({mood:'happy'}); setOutfit(); $('axoNameHome').textContent=mascotName(); }
+function refreshMascots(){ $('axoHome').innerHTML=axoSVG(); $('axoStore').innerHTML=axoSVG(); $('axoPlay').innerHTML=axoSVG(); $('axoSummary').innerHTML=axoSVG({mood:'happy'}); setOutfit(); $('axoNameHome').textContent=mascotName(); }
 function renderChars(){ var L=charList(), cur=charId(), k=world(), top=WORLDS[k].levels.length;
   $('charRow').innerHTML=L.map(function(c){ var r=S.chars&&S.chars[charKey(k,c[0])], lv=levelFor(r?r.pearls:0,k);
     return '<button type="button" class="char-chip'+(c[0]===cur?' on':'')+(lv>=top?' maxed':'')+'" data-char="'+c[0]+'" aria-label="'+esc(c[1])+', level '+lv+'">'+axoSVG({char:c[0],plain:true,mood:c[0]===cur?'happy':'neutral'})+'<span class="cc-name">'+esc(c[1])+'</span><span class="cc-lv">'+(lv>=top?'MAX':'Lv '+lv)+'</span></button>'; }).join('');
@@ -3114,7 +3192,13 @@ $('syncRetry').addEventListener('click',function(){ Net.retry(); });
 $('resetYes').addEventListener('click',function(){ var keep={kid:S.kid,charLagoon:S.charLagoon,charCandy:S.charCandy,charCanopy:S.charCanopy,charOcean:S.charOcean,charBows:S.charBows,charBoba:S.charBoba,charBirds:S.charBirds,charCheer:S.charCheer,look:S.look,grade:S.grade,gradePicked:S.gradePicked,roundLen:S.roundLen,sound:S.sound,restoredId:S.restoredId,theme:S.theme,chars:{},epoch:(S.epoch||0)+1}; S=Object.assign(defaults(),keep); save(); $('resetConfirm').hidden=true; applyWorld(); renderHome(); toast('Progress erased. Fresh start!'); });
 $('roundLen').addEventListener('change',function(){ S.roundLen=$('roundLen').value; save(); });
 $('storeGrid').addEventListener('click',function(e){ var b=e.target.closest('[data-act]'); if(!b||b.disabled) return; var it=b.closest('.shop-item'); if(it) storeAct(it.getAttribute('data-id'),b.getAttribute('data-act')); });
-$('storeGrid').addEventListener('toggle',function(e){ var d=e.target; if(!d.classList||!d.classList.contains('store-group')) return; STORE_OPEN[STORE_TAB+':'+d.getAttribute('data-group')]=d.open; },true);
+$('storeGrid').addEventListener('click',function(e){ var t=e.target.closest('[data-cat]'), b=e.target.closest('[data-cats]'); if(!t&&!b) return;
+  STORE_CAT[STORE_TAB]=t?t.getAttribute('data-cat'):null; renderStore(); SFX.warm(); SFX.tick(); $('main').scrollTop=0; });
+$('storePreview').addEventListener('click',function(e){ var b=e.target.closest('[data-act]'); if(!b||b.disabled||!TRYING) return; var a=b.getAttribute('data-act'); if(a==='stop'){ tryOn(null); SFX.tick(); } else if(a==='look'){ look(); SFX.tick(); } else storeAct(TRYING,'buy'); });
+$('storeOpen').addEventListener('click',openStore);
+/* any tap while the store is faded brings it straight back */
+document.addEventListener('pointerdown',function(e){ if($('app').classList.contains('store-look')&&!e.target.closest('#storePreview')) unlook(); },true);
+$('storeBack').addEventListener('click',closeStore);
 $('storeTabs').addEventListener('click',function(e){ var c=e.target.closest('.chip'); if(!c) return; STORE_TAB=c.getAttribute('data-tab'); renderStore(); SFX.warm(); SFX.tick(); });
 $('soundBtn').addEventListener('click',function(){ S.sound=!S.sound; save(); renderSound(); if(S.sound){ SFX.warm(); SFX.pop(); } });
 $('spellForm').addEventListener('submit',function(e){ e.preventDefault(); check(); });
@@ -3149,7 +3233,7 @@ if(HOVER){
   s.style.cssText='left:'+(Math.random()*100)+'%;width:'+size+'px;height:'+size+'px;--c:'+cols[i%5]+';animation-duration:'+(10+Math.random()*13)+'s;animation-delay:'+(-Math.random()*22)+'s;'; b.appendChild(s); } })();
 
 /* small handle for automated tests */
-window.__spelling={kb:KB,get G(){return G;},get S(){return S;},get P(){return P;},voice:Voice,world:world,save:save,startRound:startRound,levelFor:levelFor,SW:SW,charKey:charKey,migrateChars:migrateChars,WORDS3:WORDS3,WORDS4:WORDS4,net:Net,selectProfile:selectProfile,say:Say,mergeState:mergeState,SLOTS:SLOTS,store:{items:storeItems,item:storeItem,buy:buy,wear:wear,place:place,owns:owns,showing:showing,coins:coins,mastery:masteryPts,migrate:migrateStore,act:storeAct,render:renderStore},get ONLINE(){return ONLINE;},get LIVE(){return LIVE;}};
+window.__spelling={kb:KB,get G(){return G;},get S(){return S;},get P(){return P;},voice:Voice,world:world,save:save,startRound:startRound,levelFor:levelFor,SW:SW,charKey:charKey,migrateChars:migrateChars,WORDS3:WORDS3,WORDS4:WORDS4,net:Net,selectProfile:selectProfile,say:Say,mergeState:mergeState,SLOTS:SLOTS,store:{items:storeItems,item:storeItem,buy:buy,wear:wear,place:place,owns:owns,showing:showing,coins:coins,mastery:masteryPts,migrate:migrateStore,act:storeAct,render:renderStore,open:openStore,close:closeStore,tryOn:tryOn,get preview(){return TRYING;},previewWear:previewWear},get ONLINE(){return ONLINE;},get LIVE(){return LIVE;}};
 /* redraw after the online copy changed under this page */
 function refreshView(){ migrateStore(S); $('pearlCount').textContent=SW().pearls; renderLevelBar(false); setOutfit(); renderScene(); if(G.screen==='scr-home') renderHome(); }
 /* phones and home-screen apps can keep running an old copy of this page: check for a newer one and switch to it */

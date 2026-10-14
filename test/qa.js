@@ -86,8 +86,9 @@ const TEXT_SELS = ['#brand', '#homeTitle', '#homeSub', '#playerName', '.glbl', '
   await goCora();
   ok(await text('#lbLevel') === 'Level 20' && await text('#balMast') === '50' && await page.evaluate(() => { const S = __spelling.store; S.act('o12', 'buy'); S.act('o21', 'buy'); S.act('d23', 'buy'); S.act('o20', 'buy'); S.act('d20', 'buy'); return S.mastery() === 28 && S.showing(S.item('o21')); }) && await count('#axoHome .acc.on[data-lv="20"]') > 0 && await count('#axoHome .acc.on[data-lv="12"]') > 0 && await count('#scene [data-lv="23"].on') > 0, 'level 20 with all 50 mastered: pet, pet bow and pet house for mastery points, trophy and celebration for bubbles');
   await page.screenshot({ path: 'qa-cora-lv20.png' });
-  await page.$eval('#storeGrid', el => el.scrollIntoView({ block: 'start' })); await sleep(200);
-  const grid = await page.$('#storeGrid'); await grid.screenshot({ path: 'qa-cora-store.png' });
+  await page.$eval('#storeOpen', el => el.click()); await sleep(300);
+  await page.screenshot({ path: 'qa-cora-store.png' });
+  await page.$eval('#storeBack', el => el.click()); await sleep(300);
   await page.evaluate(() => { __spelling.SW().pearls = 1400; __spelling.S.words = {}; __spelling.S.epoch = (__spelling.S.epoch || 0) + 1; __spelling.save(); });
   await goCora();
   for (const c of CHARS) {
